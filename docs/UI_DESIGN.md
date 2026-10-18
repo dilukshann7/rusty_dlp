@@ -6,7 +6,9 @@ The later spacing and control refinement uses the supplied Vercel guidelines and
 
 Dark mode uses a neutral `#0A0A0A` canvas, near-black `#111111` panels, `#1A1A1A` controls, `#333333` borders, `#EDEDED` main text, and `#A1A1A1` secondary text. Ambient lighting is grayscale. Dropdown menus use the same surfaces and borders, with a neutral highlighted row in both themes.
 
-Buttons center their contents vertically. Inputs and dropdown triggers share a 44 px height and 20 px text line height. The two inspection scopes form an equal-width segmented control, centered on both axes. Field gaps are 8 px, control groups use 12–16 px, and panels and the outer shell use 24 px spacing. Headers, scrolling panels, and the persistent action bar share the same left and right edges.
+Buttons center their contents vertically. Inputs, buttons, and dropdown triggers share a compact 36 px height; fields retain a readable 20 px text line height. The two inspection scopes form an equal-width segmented control, centered on both axes. Field gaps are 4 px, control groups use 8–12 px, panel padding is 12 px, and the outer shell uses 16 px spacing. Headers, scrolling content, and the persistent action bar share the same left and right edges.
+
+New download uses a single continuous form instead of separate input and options cards. Media, quality, and container share a row; audio mode substitutes audio format and bitrate. The header and queue action are plain toolbars, the sidebar activity counts occupy one line, and playlist entries use unboxed rows. Cards remain for distinct media previews, jobs, and tool settings.
 
 ## Media and hierarchy
 
@@ -14,7 +16,7 @@ Buttons center their contents vertically. Inputs and dropdown triggers share a 4
 - Rounded 16:9 thumbnails carry a dark duration badge. Unknown durations display an em dash.
 - Red is reserved for the app's small play mark. Download actions use high-contrast neutral buttons; blue identifies focus and progress.
 - A floating sidebar provides navigation, queue counts, and activity at a glance. New download keeps its selection count and queue action outside the scrolling content.
-- Quality, media type, destination, and playlist folders remain visible. **More options** reveals exact streams, filename templates, presets, and saved defaults. Collapsing these controls preserves their values and indicates when an exact selection remains active.
+- Media type, quality/container or audio format/bitrate, and destination remain visible. **More options** reveals playlist folders, exact streams, filename templates, presets, saved defaults, and detailed output guidance. Collapsing these controls preserves their values and indicates when an exact selection remains active.
 
 ## Glass material
 
@@ -24,10 +26,10 @@ This is a cross-platform iced interpretation of Liquid Glass. It uses alpha comp
 
 **Settings → Reduce transparency** replaces glass panels with opaque surfaces, strengthens surface boundaries, removes their shadows, and hides ambient lighting. The preference persists with the other settings. Dark, light, and system appearance remain available.
 
-The app uses the system's default sans-serif font, 14 px body controls, 13 px metadata, 18 px section titles, and 24 px screen titles. Controls target a 44 px height, and the existing 900 × 600 minimum window size remains in place.
+The app uses the system's default sans-serif font, 14 px body controls, 13 px metadata, 18 px section titles, and 20 px screen titles. Controls target a 36 px height, and the existing 900 × 600 minimum window size remains in place.
 
 ## Verification boundary
 
 Source formatting, manifest consistency, and offline packaging checks can run without compiling or launching the app. Visual checks at the minimum window size, keyboard navigation, and platform rendering still require an explicitly authorized app launch. The material is not claimed to be visually verified on any platform until those checks occur.
 
-The palette and alignment refinement passed `cargo fmt --all -- --check`, `git diff --check`, and a Windows debug build using `cargo build --locked --bin rusty-dlp`, with no compiler errors or warnings. The executable was refreshed after the running app was closed. No app launch or visual verification was performed by the implementing agent, and Rust tests were not run for these appearance changes. Earlier manifest and three offline packaging fixture checks remain separate from GUI verification.
+The compact layout refinement passed `cargo fmt --all -- --check`, `git diff --check`, and a Windows debug build using `cargo build --locked --bin rusty-dlp`, with no compiler errors or warnings. The executable was refreshed. No app launch or visual verification was performed by the implementing agent, and Rust tests were not run for these appearance changes. Earlier manifest and three offline packaging fixture checks remain separate from GUI verification.

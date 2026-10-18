@@ -34,13 +34,13 @@ const QUALITIES: &[Quality] = &[
 
 fn button<'a>(content: impl Into<Element<'a, Message>>) -> widget::Button<'a, Message> {
     widget::button(container(content).center_y(Fill))
-        .padding([0, 16])
+        .padding([0, 12])
         .height(material::CONTROL_HEIGHT)
         .style(material::primary_button)
 }
 fn text_input<'a>(placeholder: &str, value: &str) -> widget::TextInput<'a, Message> {
     widget::text_input(placeholder, value)
-        .padding([12, 12])
+        .padding([8, 10])
         .size(14)
         .line_height(material::CONTROL_LINE_HEIGHT)
         .style(material::input)
@@ -56,7 +56,7 @@ where
     V: Borrow<T> + 'a,
 {
     widget::pick_list(options, selected, on_select)
-        .padding([12, 12])
+        .padding([8, 10])
         .text_size(14)
         .text_line_height(material::CONTROL_LINE_HEIGHT)
         .style(material::select)
@@ -64,9 +64,9 @@ where
 }
 fn checkbox<'a>(checked: bool) -> widget::Checkbox<'a, Message> {
     widget::checkbox(checked)
-        .size(20)
+        .size(16)
         .text_size(14)
-        .spacing(12)
+        .spacing(8)
         .style(material::check)
 }
 fn progress_bar<'a>(range: std::ops::RangeInclusive<f32>, value: f32) -> widget::ProgressBar<'a> {
@@ -86,7 +86,7 @@ fn muted<'a>(value: impl widget::text::IntoFragment<'a>) -> widget::Text<'a> {
 fn panel<'a>(app: &App, content: impl Into<Element<'a, Message>>) -> Element<'a, Message> {
     let solid = app.state.settings.reduce_transparency;
     container(content)
-        .padding(24)
+        .padding(12)
         .width(Fill)
         .style(move |theme| material::glass(theme, solid))
         .into()
@@ -96,7 +96,7 @@ fn field<'a>(
     control: impl Into<Element<'a, Message>>,
 ) -> Element<'a, Message> {
     column![muted(label), control.into()]
-        .spacing(8)
+        .spacing(4)
         .width(Fill)
         .into()
 }
@@ -129,12 +129,11 @@ pub fn view(app: &App) -> Element<'_, Message> {
     let mut sidebar = column![
         row![
             material::brand(),
-            text("rusty_dlp").size(20).font(material::STRONG)
+            text("rusty_dlp").size(18).font(material::STRONG)
         ]
         .spacing(12)
         .align_y(Alignment::Center),
-        space().height(20),
-        muted("Library"),
+        space().height(4),
     ]
     .spacing(8);
     for (screen, label, icon) in [
@@ -178,35 +177,12 @@ pub fn view(app: &App) -> Element<'_, Message> {
     }
     sidebar = sidebar
         .push(space().height(Fill))
-        .push(
-            container(
-                row![
-                    column![
-                        text(active.to_string()).size(24).font(material::STRONG),
-                        muted("Active")
-                    ]
-                    .spacing(4)
-                    .width(Fill),
-                    column![
-                        text(queued.to_string()).size(24).font(material::STRONG),
-                        muted("Queued")
-                    ]
-                    .spacing(4)
-                    .width(Fill),
-                ]
-                .spacing(12),
-            )
-            .padding(14)
-            .width(Fill)
-            .style(material::inset),
-        )
-        .push(space().height(4))
-        .push(muted("On your device · v0.1.0"));
-    let (title, subtitle) = match app.screen {
-        Screen::NewDownload => ("New download", "Save a video. Keep a playlist."),
-        Screen::Queue => ("Download queue", "Everything you're saving, in one place."),
-        Screen::History => ("History", "Your downloads, ready when you are."),
-        Screen::Settings => ("Settings", "A little more personal."),
+        .push(muted(format!("{active} active · {queued} queued")));
+    let title = match app.screen {
+        Screen::NewDownload => "New download",
+        Screen::Queue => "Queue",
+        Screen::History => "History",
+        Screen::Settings => "Settings",
     };
     let page = match app.screen {
         Screen::NewDownload => new_download(app),
@@ -230,29 +206,27 @@ pub fn view(app: &App) -> Element<'_, Message> {
     };
     let header = container(
         row![
-            column![text(title).size(24).font(material::STRONG), muted(subtitle)].spacing(4),
+            text(title).size(20).font(material::STRONG),
             space().width(Fill),
             button(
                 row![text("●").size(9).color(status_color), text(status).size(12)]
                     .spacing(8)
                     .align_y(Alignment::Center)
             )
-            .style(material::secondary_button)
+            .style(material::quiet_button)
             .on_press(Message::Navigate(Screen::Settings)),
         ]
         .spacing(12)
         .align_y(Alignment::Center),
     )
-    .padding([16, 24])
-    .width(Fill)
-    .style(move |theme| material::glass(theme, solid));
+    .width(Fill);
     let mut content = column![
         header,
         scrollable(container(page).width(Fill))
             .style(material::scroll)
             .height(Fill),
     ]
-    .spacing(16)
+    .spacing(12)
     .width(Fill)
     .height(Fill);
     if app.screen == Screen::NewDownload {
@@ -280,14 +254,14 @@ pub fn view(app: &App) -> Element<'_, Message> {
     }
     let chrome = row![
         container(sidebar)
-            .padding(16)
-            .width(204)
+            .padding(12)
+            .width(184)
             .height(Fill)
             .style(move |theme| material::sidebar(theme, solid)),
         content,
     ]
-    .spacing(24)
-    .padding(24)
+    .spacing(16)
+    .padding(16)
     .height(Fill)
     .width(Fill);
     if solid {
@@ -321,7 +295,7 @@ fn new_download(app: &App) -> Element<'_, Message> {
                     .align_x(Alignment::Center),
             )
             .width(Fill)
-            .height(36)
+            .height(28)
             .padding([0, 12])
             .style(move |theme, status| {
                 if selected {
@@ -334,30 +308,12 @@ fn new_download(app: &App) -> Element<'_, Message> {
         );
     }
     let mut top = column![
-        row![
-            row![
-                material::icon(material::Icon::Link, material::FOCUS),
-                column![
-                    text("Add your links").size(18).font(material::STRONG),
-                    muted("Videos, audio, or a whole playlist.")
-                ]
-                .spacing(4)
-            ]
-            .spacing(12)
-            .align_y(Alignment::Center)
-            .width(Fill),
-            button("Import list")
-                .style(material::quiet_button)
-                .on_press(Message::ImportUrls),
-        ]
-        .spacing(12)
-        .align_y(Alignment::Center),
         text_editor(&app.urls)
             .placeholder("Paste a video or playlist link…\nOne URL per line")
             .on_action(Message::EditUrls)
-            .padding(16)
+            .padding(10)
             .size(14)
-            .height(112)
+            .height(72)
             .style(material::editor),
         row![
             container(scope_controls)
@@ -365,6 +321,9 @@ fn new_download(app: &App) -> Element<'_, Message> {
                 .width(320)
                 .style(material::segmented),
             space().width(Fill),
+            button("Import list")
+                .style(material::quiet_button)
+                .on_press(Message::ImportUrls),
             button(if app.inspecting.is_some() {
                 "Inspecting…"
             } else {
@@ -372,10 +331,10 @@ fn new_download(app: &App) -> Element<'_, Message> {
             })
             .on_press_maybe(inspect_enabled.then_some(Message::Inspect)),
         ]
-        .spacing(16)
+        .spacing(8)
         .align_y(Alignment::Center),
     ]
-    .spacing(16);
+    .spacing(12);
     if !app.dependencies.ready() && !app.discovering {
         top = top.push(
             row![
@@ -388,11 +347,10 @@ fn new_download(app: &App) -> Element<'_, Message> {
             .align_y(Alignment::Center),
         );
     }
-    let mut page = column![panel(app, top)].spacing(24);
+    let mut page = column![top, options(app)].spacing(12);
     for (index, preview) in app.previews.iter().enumerate() {
         page = page.push(preview_card(app, index, preview));
     }
-    page = page.push(options(app));
     page.into()
 }
 
@@ -409,26 +367,20 @@ fn download_action_bar(app: &App) -> Element<'_, Message> {
             }
         })
         .sum::<usize>();
-    panel(
-        app,
+    container(
         row![
-            column![
-                text(format!("{selected} selected"))
-                    .size(15)
-                    .font(material::STRONG),
-                muted("Ready when you are"),
-            ]
-            .spacing(3),
+            muted(format!("{selected} selected")),
             space().width(Fill),
-            button("Add selected to queue")
-                .padding([0, 20])
-                .on_press_maybe(
-                    (selected > 0 && !app.storage_blocked && !app.storage_failed)
-                        .then_some(Message::Enqueue)
-                )
+            button("Add to queue").on_press_maybe(
+                (selected > 0 && !app.storage_blocked && !app.storage_failed)
+                    .then_some(Message::Enqueue)
+            )
         ]
         .align_y(Alignment::Center),
     )
+    .padding([4, 0])
+    .width(Fill)
+    .into()
 }
 
 fn thumbnail<'a>(
@@ -495,8 +447,8 @@ fn preview_card<'a>(app: &'a App, index: usize, preview: &'a MediaPreview) -> El
                 app,
                 preview.thumbnail.as_ref(),
                 preview.duration,
-                192.0,
-                108.0
+                160.0,
+                90.0
             ),
             column![
                 checkbox(app.selected_previews.contains(&preview.url))
@@ -542,7 +494,7 @@ fn preview_card<'a>(app: &'a App, index: usize, preview: &'a MediaPreview) -> El
                     .then_some(move |v| Message::SelectEntry(index, entry_index, v)),
             );
             let mut entry_row = row![
-                thumbnail(app, entry.thumbnail.as_ref(), entry.duration, 96.0, 54.0),
+                thumbnail(app, entry.thumbnail.as_ref(), entry.duration, 80.0, 45.0),
                 column![
                     check,
                     muted(
@@ -567,7 +519,7 @@ fn preview_card<'a>(app: &'a App, index: usize, preview: &'a MediaPreview) -> El
                         ),
                 );
             }
-            entries = entries.push(container(entry_row).padding(8).style(material::inset));
+            entries = entries.push(container(entry_row).padding([4, 0]).width(Fill));
         }
         body = body.push(
             scrollable(entries)
@@ -587,32 +539,51 @@ fn preview_card<'a>(app: &'a App, index: usize, preview: &'a MediaPreview) -> El
 }
 
 fn options(app: &App) -> Element<'_, Message> {
-    let mut body = column![
-        text("Download options").size(18).font(material::STRONG),
-        row![
-            field(
-                "Media",
-                pick_list(MediaMode::ALL, Some(app.options.mode), Message::Mode).width(Fill)
-            ),
-            field(
+    let mut controls = row![field(
+        "Media",
+        pick_list(MediaMode::ALL, Some(app.options.mode), Message::Mode).width(Fill)
+    )]
+    .spacing(12);
+    if app.options.mode == MediaMode::AudioOnly {
+        controls = controls
+            .push(field(
+                "Audio format",
+                pick_list(
+                    AudioFormat::ALL,
+                    Some(app.options.audio_format),
+                    Message::AudioFormat,
+                )
+                .width(Fill),
+            ))
+            .push(field(
+                "Bitrate (kbps)",
+                pick_list(
+                    [64, 96, 128, 160, 192, 256, 320],
+                    Some(app.options.audio_bitrate),
+                    Message::Bitrate,
+                )
+                .width(Fill),
+            ));
+    } else {
+        controls = controls
+            .push(field(
                 "Quality limit",
                 pick_list(QUALITIES, Some(Quality(app.options.max_height)), |q| {
                     Message::Quality(q.0)
                 })
-                .width(Fill)
-            ),
-        ]
-        .spacing(16),
-    ]
-    .spacing(16);
-    if app.options.mode == MediaMode::AudioOnly {
-        body = body.push(row![field("Audio format", pick_list(AudioFormat::ALL, Some(app.options.audio_format), Message::AudioFormat).width(Fill)),
-            field("Bitrate (kbps)", pick_list([64, 96, 128, 160, 192, 256, 320], Some(app.options.audio_bitrate), Message::Bitrate).width(Fill)),
-        ].spacing(16)).push(muted("Original preserves the source stream. MP3 and M4A use FFmpeg when conversion is needed; bitrate does not improve source quality."));
-    } else {
-        body = body.push(field("Video container", pick_list(Container::ALL, Some(app.options.container), Message::Container).width(Fill)))
-            .push(muted("An explicit container filters compatible streams and remuxes without video transcoding. Quality limits never fall back above your cap."));
+                .width(Fill),
+            ))
+            .push(field(
+                "Container",
+                pick_list(
+                    Container::ALL,
+                    Some(app.options.container),
+                    Message::Container,
+                )
+                .width(Fill),
+            ));
     }
+    let mut body = column![controls].spacing(12);
     body = body.push(field(
         "Destination",
         row![
@@ -629,11 +600,6 @@ fn options(app: &App) -> Element<'_, Message> {
         .spacing(8),
     ));
     body = body.push(
-        checkbox(app.options.playlist_folder)
-            .label("Create a folder for each playlist")
-            .on_toggle(Message::PlaylistFolder),
-    );
-    body = body.push(
         button(if app.show_advanced {
             "Fewer options"
         } else {
@@ -649,8 +615,18 @@ fn options(app: &App) -> Element<'_, Message> {
                 "Exact stream selection is active. Open More options to change it.",
             ));
         }
-        return panel(app, body);
+        return body.into();
     }
+    body = body.push(
+        checkbox(app.options.playlist_folder)
+            .label("Create a folder for each playlist")
+            .on_toggle(Message::PlaylistFolder),
+    );
+    body = body.push(muted(if app.options.mode == MediaMode::AudioOnly {
+        "Original keeps the source audio; MP3/M4A use FFmpeg. Bitrate does not improve source quality."
+    } else {
+        "Quality is a maximum. Explicit containers select compatible streams without video transcoding."
+    }));
     if app.previews.len() == 1 && !app.previews[0].is_playlist {
         let formats = &app.previews[0].formats;
         if app.options.mode != MediaMode::AudioOnly {
@@ -722,7 +698,7 @@ fn options(app: &App) -> Element<'_, Message> {
             .style(material::quiet_button)
             .on_press(Message::SaveDefaults),
     );
-    panel(app, body)
+    body.into()
 }
 
 fn queue(app: &App, history: bool) -> Element<'_, Message> {

@@ -21,7 +21,7 @@ pub const MEDIUM: Font = Font {
 };
 pub const BRAND: Color = Color::from_rgb8(255, 0, 0);
 pub const FOCUS: Color = Color::from_rgb8(62, 166, 255);
-pub const CONTROL_HEIGHT: f32 = 44.0;
+pub const CONTROL_HEIGHT: f32 = 36.0;
 pub const CONTROL_LINE_HEIGHT: iced::widget::text::LineHeight =
     iced::widget::text::LineHeight::Absolute(iced::Pixels(20.0));
 
@@ -99,7 +99,7 @@ pub fn glass(theme: &Theme, solid: bool) -> container::Style {
                 alpha(Color::WHITE, 0.96)
             },
             width: 1.0,
-            radius: 16.0.into(),
+            radius: 12.0.into(),
         },
         shadow: if solid {
             Shadow::default()
@@ -123,7 +123,7 @@ pub fn sidebar(theme: &Theme, solid: bool) -> container::Style {
             linear(alpha(Color::WHITE, 0.88), alpha(gray(246), 0.87))
         });
     }
-    style.border.radius = 20.0.into();
+    style.border.radius = 12.0.into();
     style
 }
 
