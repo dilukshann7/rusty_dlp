@@ -1,4 +1,5 @@
 pub mod dependencies;
+pub mod download;
 pub mod formats;
 pub mod input;
 pub mod metadata;

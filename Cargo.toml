@@ -36,6 +36,11 @@ windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_System_
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
 
+[[bin]]
+name = "fake-downloader"
+path = "tests/support/fake_downloader.rs"
+required-features = ["test-support"]
+
 [features]
 test-support = []
 
