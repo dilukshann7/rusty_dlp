@@ -68,7 +68,7 @@ fn checkbox<'a>(checked: bool) -> widget::Checkbox<'a, Message> {
 }
 fn progress_bar<'a>(range: std::ops::RangeInclusive<f32>, value: f32) -> widget::ProgressBar<'a> {
     widget::progress_bar(range, value)
-        .height(5)
+        .girth(5)
         .style(material::progress)
 }
 
@@ -252,6 +252,9 @@ pub fn view(app: &App) -> Element<'_, Message> {
     .spacing(16)
     .width(Fill)
     .height(Fill);
+    if app.screen == Screen::NewDownload {
+        content = content.push(download_action_bar(app));
+    }
     if let Some(notice) = &app.notice {
         content = content.push(
             container(
@@ -375,6 +378,10 @@ fn new_download(app: &App) -> Element<'_, Message> {
         page = page.push(preview_card(app, index, preview));
     }
     page = page.push(options(app));
+    page.into()
+}
+
+fn download_action_bar(app: &App) -> Element<'_, Message> {
     let selected = app
         .previews
         .iter()
@@ -387,9 +394,16 @@ fn new_download(app: &App) -> Element<'_, Message> {
             }
         })
         .sum::<usize>();
-    page.push(
+    panel(
+        app,
         row![
-            muted(format!("{selected} item(s) selected")),
+            column![
+                text(format!("{selected} selected"))
+                    .size(15)
+                    .font(material::STRONG),
+                muted("Ready when you are"),
+            ]
+            .spacing(3),
             space().width(Fill),
             button("Add selected to queue")
                 .padding([12, 20])
@@ -400,32 +414,53 @@ fn new_download(app: &App) -> Element<'_, Message> {
         ]
         .align_y(Alignment::Center),
     )
-    .into()
 }
 
 fn thumbnail<'a>(
     app: &'a App,
     url: Option<&String>,
+    seconds: Option<f64>,
     width: f32,
     height: f32,
 ) -> Element<'a, Message> {
-    if let Some(handle) = url.and_then(|url| app.thumbnails.get(url)) {
-        container(
+    let preview: Element<'a, Message> =
+        if let Some(handle) = url.and_then(|url| app.thumbnails.get(url)) {
             image(handle.clone())
                 .width(width)
                 .height(height)
-                .content_fit(iced::ContentFit::Cover),
-        )
-        .into()
-    } else {
-        container(text("R / D").size(18).style(text::secondary))
+                .content_fit(iced::ContentFit::Cover)
+                .border_radius(12.0)
+                .into()
+        } else {
+            container(material::icon(
+                material::Icon::Download,
+                material::secondary(&app.theme()),
+            ))
             .width(width)
             .height(height)
             .center_x(width)
             .center_y(height)
             .style(material::inset)
             .into()
-    }
+        };
+    let label = seconds
+        .filter(|s| s.is_finite() && *s >= 0.0)
+        .map(|s| duration(Some(s)))
+        .unwrap_or_else(|| "—".into());
+    stack![
+        preview,
+        container(
+            container(text(label).size(11).font(material::MEDIUM))
+                .padding([3, 6])
+                .style(material::duration_badge)
+        )
+        .padding(6)
+        .align_right(width)
+        .align_bottom(height),
+    ]
+    .width(width)
+    .height(height)
+    .into()
 }
 
 fn preview_card<'a>(app: &'a App, index: usize, preview: &'a MediaPreview) -> Element<'a, Message> {
@@ -441,10 +476,17 @@ fn preview_card<'a>(app: &'a App, index: usize, preview: &'a MediaPreview) -> El
     };
     let mut body = column![
         row![
-            thumbnail(app, preview.thumbnail.as_ref(), 128.0, 72.0),
+            thumbnail(
+                app,
+                preview.thumbnail.as_ref(),
+                preview.duration,
+                192.0,
+                108.0
+            ),
             column![
                 checkbox(app.selected_previews.contains(&preview.url))
                     .label(preview.title.clone())
+                    .text_size(16)
                     .on_toggle(move |v| Message::SelectPreview(url.clone(), v)),
                 muted(details)
             ]
@@ -485,7 +527,7 @@ fn preview_card<'a>(app: &'a App, index: usize, preview: &'a MediaPreview) -> El
                     .then_some(move |v| Message::SelectEntry(index, entry_index, v)),
             );
             let mut entry_row = row![
-                thumbnail(app, entry.thumbnail.as_ref(), 72.0, 42.0),
+                thumbnail(app, entry.thumbnail.as_ref(), entry.duration, 96.0, 54.0),
                 column![
                     check,
                     muted(
@@ -556,6 +598,44 @@ fn options(app: &App) -> Element<'_, Message> {
         body = body.push(field("Video container", pick_list(Container::ALL, Some(app.options.container), Message::Container).width(Fill)))
             .push(muted("An explicit container filters compatible streams and remuxes without video transcoding. Quality limits never fall back above your cap."));
     }
+    body = body.push(field(
+        "Destination",
+        row![
+            text_input(
+                "Choose a folder",
+                &app.options.destination.to_string_lossy()
+            )
+            .on_input(Message::Destination)
+            .width(Fill),
+            button("Browse")
+                .style(material::secondary_button)
+                .on_press(Message::BrowseDestination(false))
+        ]
+        .spacing(8),
+    ));
+    body = body.push(
+        checkbox(app.options.playlist_folder)
+            .label("Create a folder for each playlist")
+            .on_toggle(Message::PlaylistFolder),
+    );
+    body = body.push(
+        button(if app.show_advanced {
+            "Fewer options"
+        } else {
+            "More options"
+        })
+        .style(material::quiet_button)
+        .on_press(Message::ToggleAdvanced),
+    );
+    if !app.show_advanced {
+        let exact = app.exact_video != "Automatic" || app.exact_audio != "Automatic";
+        if exact {
+            body = body.push(muted(
+                "Exact stream selection is active. Open More options to change it.",
+            ));
+        }
+        return panel(app, body);
+    }
     if app.previews.len() == 1 && !app.previews[0].is_playlist {
         let formats = &app.previews[0].formats;
         if app.options.mode != MediaMode::AudioOnly {
@@ -589,32 +669,11 @@ fn options(app: &App) -> Element<'_, Message> {
         }
         body = body.push(muted("For an exact silent video stream, choose an exact audio stream too. Exact IDs are checked again when the job starts."));
     }
-    body = body
-        .push(field(
-            "Destination",
-            row![
-                text_input(
-                    "Choose a folder",
-                    &app.options.destination.to_string_lossy()
-                )
-                .on_input(Message::Destination)
-                .width(Fill),
-                button("Browse")
-                    .style(material::secondary_button)
-                    .on_press(Message::BrowseDestination(false))
-            ]
-            .spacing(8),
-        ))
-        .push(field(
-            "Filename template",
-            text_input("%(title)s [%(id)s].%(ext)s", &app.options.filename_template)
-                .on_input(Message::Template),
-        ))
-        .push(
-            checkbox(app.options.playlist_folder)
-                .label("Create a folder for each playlist")
-                .on_toggle(Message::PlaylistFolder),
-        );
+    body = body.push(field(
+        "Filename template",
+        text_input("%(title)s [%(id)s].%(ext)s", &app.options.filename_template)
+            .on_input(Message::Template),
+    ));
     let presets = app
         .state
         .settings
