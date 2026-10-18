@@ -1,3 +1,5 @@
+pub mod material;
+
 use crate::{
     app::{App, Message, Screen},
     model::*,

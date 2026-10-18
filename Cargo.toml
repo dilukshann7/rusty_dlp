@@ -8,7 +8,7 @@ license = "MIT"
 default-run = "rusty-dlp"
 
 [dependencies]
-iced = { version = "=0.14.0", default-features = false, features = ["wgpu", "tiny-skia", "tokio", "image-without-codecs", "x11", "wayland", "linux-theme-detection", "crisp"] }
+iced = { version = "=0.14.0", default-features = false, features = ["wgpu", "tiny-skia", "tokio", "image-without-codecs", "svg", "x11", "wayland", "linux-theme-detection", "crisp"] }
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp"] }
 tokio = { version = "1", features = ["process", "io-util", "sync", "time", "fs", "rt-multi-thread", "macros"] }
 tokio-util = { version = "0.7", features = ["rt"] }

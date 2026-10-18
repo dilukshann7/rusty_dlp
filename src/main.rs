@@ -19,6 +19,10 @@ fn main() -> iced::Result {
     };
     iced::application(move || App::new(root.clone()), App::update, ui::view)
         .title("rusty_dlp")
+        .settings(iced::Settings {
+            default_text_size: iced::Pixels(14.0),
+            ..Default::default()
+        })
         .theme(App::theme)
         .subscription(App::subscription)
         .window(iced::window::Settings {

@@ -80,6 +80,7 @@ pub enum Message {
     OpenFolder(PathBuf),
     Opened(Result<(), String>),
     Theme(ThemeChoice),
+    ReduceTransparency(bool),
     Concurrency(usize),
     BrowseTool(ToolKind),
     ToolChosen(ToolKind, Option<PathBuf>),
@@ -199,21 +200,9 @@ impl App {
     }
 
     pub fn theme(&self) -> Theme {
-        match self.state.settings.theme {
-            ThemeChoice::Light => Theme::Light,
-            ThemeChoice::System if self.system_light => Theme::Light,
-            _ => Theme::custom(
-                "rusty_dlp",
-                iced::theme::Palette {
-                    background: iced::Color::from_rgb8(18, 21, 27),
-                    text: iced::Color::from_rgb8(230, 235, 243),
-                    primary: iced::Color::from_rgb8(91, 151, 245),
-                    success: iced::Color::from_rgb8(71, 189, 143),
-                    warning: iced::Color::from_rgb8(233, 182, 76),
-                    danger: iced::Color::from_rgb8(238, 114, 125),
-                },
-            ),
-        }
+        let light = self.state.settings.theme == ThemeChoice::Light
+            || (self.state.settings.theme == ThemeChoice::System && self.system_light);
+        crate::ui::material::theme(light)
     }
 
     pub fn subscription(&self) -> Subscription<Message> {
@@ -818,6 +807,10 @@ impl App {
             }
             Message::Concurrency(value) => {
                 self.state.settings.concurrency = value.clamp(1, 4);
+                self.dirty();
+            }
+            Message::ReduceTransparency(value) => {
+                self.state.settings.reduce_transparency = value;
                 self.dirty();
             }
             Message::BrowseTool(kind) => {

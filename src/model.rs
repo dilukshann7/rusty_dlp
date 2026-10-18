@@ -125,6 +125,7 @@ pub struct Preset {
 #[serde(default)]
 pub struct Settings {
     pub theme: ThemeChoice,
+    pub reduce_transparency: bool,
     pub concurrency: usize,
     pub defaults: DownloadOptions,
     pub tool_paths: BTreeMap<ToolKind, PathBuf>,
@@ -134,6 +135,7 @@ impl Default for Settings {
     fn default() -> Self {
         Self {
             theme: ThemeChoice::Dark,
+            reduce_transparency: false,
             concurrency: 2,
             defaults: DownloadOptions::default(),
             tool_paths: BTreeMap::new(),
