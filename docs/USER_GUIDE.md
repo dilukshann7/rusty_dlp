@@ -38,4 +38,3 @@ If the main state is corrupt, the app attempts the backup. If both files are unr
 If a state write fails during use, the queue pauses pending jobs. Fix disk space or folder permissions and choose **Retry saving** in Settings before restarting queued work.
 
 The app avoids overwriting existing outputs and ignores unrelated yt-dlp configurations/plugins. Logs are bounded and redact URL queries; logs and thumbnail caches are session-only. File URLs and URLs containing embedded credentials are rejected. Public media is the initial scope; login/cookies, subtitles, SponsorBlock, custom arguments, and time ranges are deferred.
-
