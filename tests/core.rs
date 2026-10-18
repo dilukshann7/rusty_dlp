@@ -1,4 +1,54 @@
-use rusty_dlp::{model::*, queue::Queue, storage::{load_from, save_to}};
+use rusty_dlp::{
+    engine::{
+        formats::format_selector,
+        input::{parse_range, parse_urls},
+        protocol::parse_record,
+    },
+    model::*,
+    queue::Queue,
+    storage::{load_from, save_to},
+};
+
+#[test]
+fn invalid_url_lines_do_not_discard_valid_urls() {
+    let parsed = parse_urls(
+        "\u{feff}https://example.com/a\n\nnot a url\nfile:///tmp/x\nhttps://example.com/b",
+    );
+    assert_eq!(parsed.urls.len(), 2);
+    assert_eq!(parsed.errors.len(), 2);
+    assert_eq!(parsed.errors[0].0, 3);
+}
+
+#[test]
+fn playlist_ranges_are_inclusive_and_reject_zero_or_reversed_ranges() {
+    assert_eq!(parse_range("2-4").unwrap(), (2, 4));
+    assert!(parse_range("0-4").is_err());
+    assert!(parse_range("4-2").is_err());
+}
+
+#[test]
+fn capped_selection_never_has_an_uncapped_fallback() {
+    let options = DownloadOptions {
+        max_height: Some(1080),
+        ..Default::default()
+    };
+    assert_eq!(
+        format_selector(&options).unwrap(),
+        "bv[height<=1080]+ba/b[height<=1080]"
+    );
+}
+
+#[test]
+fn webm_filters_both_video_and_audio() {
+    let options = DownloadOptions {
+        container: Container::Webm,
+        ..Default::default()
+    };
+    assert_eq!(
+        format_selector(&options).unwrap(),
+        "bv[ext=webm]+ba[ext=webm]/b[ext=webm]"
+    );
+}
 
 #[test]
 fn exact_formats_are_bound_to_one_media_item() {
@@ -131,6 +181,28 @@ fn alternate_youtube_links_to_same_media_are_duplicates() {
 }
 
 #[test]
+fn shared_video_links_with_playlist_context_are_still_video_links() {
+    use rusty_dlp::engine::input::{collection_url, video_context};
+    let share = "https://youtu.be/abc?list=PL123";
+    assert!(collection_url(share));
+    assert!(video_context(share));
+    assert!(!video_context(
+        "https://www.youtube.com/playlist?list=PL123"
+    ));
+}
+
+#[test]
+fn download_finished_record_is_not_final_success() {
+    let event = parse_record(
+        "RDL_PROGRESS:{\"status\":\"finished\",\"downloaded_bytes\":400,\"total_bytes\":400}",
+    )
+    .unwrap();
+    assert!(matches!(event, EngineEvent::Progress(_)));
+    assert!(parse_record("RDL_PROGRESS:{broken}").is_none());
+    assert!(parse_record("ordinary human output").is_none());
+}
+
+#[test]
 fn storage_recovers_backup_and_never_resumes_automatically() {
     let directory = tempfile::tempdir().unwrap();
     let mut state = PersistedState::default();
@@ -189,4 +261,14 @@ fn single_instance_lock_is_released_when_owner_exits() {
     assert!(rusty_dlp::storage::InstanceLock::acquire(directory.path()).is_err());
     drop(first);
     assert!(rusty_dlp::storage::InstanceLock::acquire(directory.path()).is_ok());
+}
+
+#[test]
+fn unknown_total_does_not_display_a_fake_percentage() {
+    let event =
+        parse_record("RDL_PROGRESS:{\"downloaded_bytes\":500,\"total_bytes\":null}").unwrap();
+    let EngineEvent::Progress(progress) = event else {
+        panic!("expected progress");
+    };
+    assert!(progress.percent().is_none());
 }
