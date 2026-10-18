@@ -5,12 +5,10 @@ use crate::{
     model::*,
 };
 use iced::{
-    Alignment, Element, Fill, Length,
-    widget::{
-        self, button, checkbox, column, container, image, pick_list, progress_bar, row, scrollable,
-        space, text, text_editor, text_input,
-    },
+    Alignment, Element, Fill, Length, Theme,
+    widget::{self, column, container, image, row, scrollable, space, stack, text, text_editor},
 };
+use std::borrow::Borrow;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Quality(pub Option<u32>);
@@ -34,14 +32,60 @@ const QUALITIES: &[Quality] = &[
     Quality(Some(2160)),
 ];
 
-fn muted<'a>(value: impl widget::text::IntoFragment<'a>) -> widget::Text<'a> {
-    text(value).size(13).style(text::secondary)
+fn button<'a>(content: impl Into<Element<'a, Message>>) -> widget::Button<'a, Message> {
+    widget::button(content)
+        .padding([11, 16])
+        .height(44)
+        .style(material::primary_button)
 }
-fn panel<'a>(content: impl Into<Element<'a, Message>>) -> Element<'a, Message> {
+fn text_input<'a>(placeholder: &str, value: &str) -> widget::TextInput<'a, Message> {
+    widget::text_input(placeholder, value)
+        .padding([13, 14])
+        .size(14)
+        .style(material::input)
+}
+fn pick_list<'a, T, L, V>(
+    options: L,
+    selected: Option<V>,
+    on_select: impl Fn(T) -> Message + 'a,
+) -> widget::PickList<'a, T, L, V, Message>
+where
+    T: ToString + PartialEq + Clone + 'a,
+    L: Borrow<[T]> + 'a,
+    V: Borrow<T> + 'a,
+{
+    widget::pick_list(options, selected, on_select)
+        .padding([13, 14])
+        .text_size(14)
+        .style(material::select)
+}
+fn checkbox<'a>(checked: bool) -> widget::Checkbox<'a, Message> {
+    widget::checkbox(checked)
+        .size(20)
+        .text_size(14)
+        .spacing(10)
+        .style(material::check)
+}
+fn progress_bar<'a>(range: std::ops::RangeInclusive<f32>, value: f32) -> widget::ProgressBar<'a> {
+    widget::progress_bar(range, value)
+        .height(5)
+        .style(material::progress)
+}
+
+fn muted<'a>(value: impl widget::text::IntoFragment<'a>) -> widget::Text<'a> {
+    text(value)
+        .size(13)
+        .line_height(1.4)
+        .style(|theme: &Theme| text::Style {
+            color: Some(material::secondary(theme)),
+        })
+}
+fn panel<'a>(app: &App, content: impl Into<Element<'a, Message>>) -> Element<'a, Message> {
+    let solid = app.state.settings.reduce_transparency;
     container(content)
-        .padding(18)
+        .padding(20)
         .width(Fill)
-        .style(container::rounded_box)
+        .style(move |theme| material::glass(theme, solid))
         .into()
 }
 fn field<'a>(
@@ -55,14 +99,18 @@ fn field<'a>(
 }
 
 pub fn view(app: &App) -> Element<'_, Message> {
+    let theme = app.theme();
+    let solid = app.state.settings.reduce_transparency;
     if app.closing {
-        return container(
+        return container(panel(
+            app,
             column![
-                text("Finishing safely…").size(26),
-                muted("Stopping child processes and saving the queue.")
+                text("Finishing safely…").size(24).font(material::STRONG),
+                muted("Stopping downloads and saving your queue."),
             ]
-            .spacing(14),
-        )
+            .spacing(12),
+        ))
+        .padding(32)
         .center_x(Fill)
         .center_y(Fill)
         .into();
@@ -76,45 +124,86 @@ pub fn view(app: &App) -> Element<'_, Message> {
         .filter(|j| j.state == JobState::Queued)
         .count();
     let mut sidebar = column![
-        text("rusty_dlp").size(23),
-        muted("Your media. Your queue."),
-        space().height(24),
+        row![
+            material::brand(),
+            text("rusty_dlp").size(20).font(material::STRONG)
+        ]
+        .spacing(10)
+        .align_y(Alignment::Center),
+        space().height(20),
+        muted("Library"),
     ]
-    .spacing(9);
-    for (screen, label) in [
-        (Screen::NewDownload, "New download"),
-        (Screen::Queue, "Queue"),
-        (Screen::History, "History"),
-        (Screen::Settings, "Settings"),
+    .spacing(8);
+    for (screen, label, icon) in [
+        (
+            Screen::NewDownload,
+            "New download",
+            material::Icon::Download,
+        ),
+        (Screen::Queue, "Queue", material::Icon::Queue),
+        (Screen::History, "History", material::Icon::History),
+        (Screen::Settings, "Settings", material::Icon::Settings),
     ] {
-        let style = if screen == app.screen {
-            button::primary
+        let selected = screen == app.screen;
+        let color = if selected {
+            theme.palette().text
         } else {
-            button::secondary
+            material::secondary(&theme)
         };
+        let mut label_row = row![
+            material::icon(icon, color),
+            text(label).size(14).font(if selected {
+                material::STRONG
+            } else {
+                iced::Font::DEFAULT
+            })
+        ]
+        .spacing(12)
+        .align_y(Alignment::Center);
+        if screen == Screen::Queue && queued > 0 {
+            label_row = label_row
+                .push(space().width(Fill))
+                .push(text(queued.to_string()).size(12));
+        }
         sidebar = sidebar.push(
-            button(text(label).size(15))
+            button(label_row)
                 .width(Fill)
-                .padding([12, 14])
-                .style(style)
+                .padding([11, 12])
+                .style(move |theme, status| material::navigation(theme, status, selected))
                 .on_press(Message::Navigate(screen)),
         );
     }
     sidebar = sidebar
         .push(space().height(Fill))
-        .push(muted(format!("{active} active · {queued} queued")))
-        .push(muted("rusty_dlp 0.1.0"));
-    let title = match app.screen {
-        Screen::NewDownload => "New download",
-        Screen::Queue => "Download queue",
-        Screen::History => "History",
-        Screen::Settings => "Settings",
-    };
-    let subtitle = match app.screen {
-        Screen::NewDownload => "Paste links, choose your quality, and build your queue.",
-        Screen::Queue => "Progress, retries, and the next files on your list.",
-        Screen::History => "Finished downloads and anything that needs another try.",
-        Screen::Settings => "Make it yours. Keep your download tools ready.",
+        .push(
+            container(
+                row![
+                    column![
+                        text(active.to_string()).size(24).font(material::STRONG),
+                        muted("Active")
+                    ]
+                    .spacing(4)
+                    .width(Fill),
+                    column![
+                        text(queued.to_string()).size(24).font(material::STRONG),
+                        muted("Queued")
+                    ]
+                    .spacing(4)
+                    .width(Fill),
+                ]
+                .spacing(12),
+            )
+            .padding(14)
+            .width(Fill)
+            .style(material::inset),
+        )
+        .push(space().height(4))
+        .push(muted("On your device · v0.1.0"));
+    let (title, subtitle) = match app.screen {
+        Screen::NewDownload => ("New download", "Save a video. Keep a playlist."),
+        Screen::Queue => ("Download queue", "Everything you're saving, in one place."),
+        Screen::History => ("History", "Your downloads, ready when you are."),
+        Screen::Settings => ("Settings", "A little more personal."),
     };
     let page = match app.screen {
         Screen::NewDownload => new_download(app),
@@ -131,48 +220,82 @@ pub fn view(app: &App) -> Element<'_, Message> {
     } else {
         "Setup needed"
     };
-    let header = row![
-        column![text(title).size(28), muted(subtitle)].spacing(5),
-        space().width(Fill),
-        button(text(status).size(12))
-            .style(button::secondary)
-            .on_press(Message::Navigate(Screen::Settings))
-    ]
-    .align_y(Alignment::Center);
+    let status_color = if app.dependencies.ready() {
+        theme.palette().success
+    } else {
+        theme.palette().warning
+    };
+    let header = container(
+        row![
+            column![text(title).size(24).font(material::STRONG), muted(subtitle)].spacing(4),
+            space().width(Fill),
+            button(
+                row![text("●").size(9).color(status_color), text(status).size(12)]
+                    .spacing(8)
+                    .align_y(Alignment::Center)
+            )
+            .style(material::secondary_button)
+            .on_press(Message::Navigate(Screen::Settings)),
+        ]
+        .spacing(12)
+        .align_y(Alignment::Center),
+    )
+    .padding([16, 20])
+    .width(Fill)
+    .style(move |theme| material::glass(theme, solid));
     let mut content = column![
         header,
-        scrollable(container(page).width(Fill).padding([0, 2])).height(Fill)
+        scrollable(container(page).width(Fill).padding([4, 3]))
+            .style(material::scroll)
+            .height(Fill),
     ]
-    .spacing(22)
-    .padding(26)
+    .spacing(16)
     .width(Fill)
     .height(Fill);
     if let Some(notice) = &app.notice {
         content = content.push(
             container(
                 row![
-                    text(notice).size(13).width(Fill),
+                    scrollable(text(notice).size(13).line_height(1.4))
+                        .style(material::scroll)
+                        .height(64)
+                        .width(Fill),
                     button("Dismiss")
-                        .style(button::text)
-                        .on_press(Message::DismissNotice)
+                        .style(material::quiet_button)
+                        .on_press(Message::DismissNotice),
                 ]
                 .spacing(12)
                 .align_y(Alignment::Center),
             )
             .padding(12)
-            .style(container::bordered_box),
+            .width(Fill)
+            .style(move |theme| material::glass(theme, solid)),
         );
     }
-    row![
+    let chrome = row![
         container(sidebar)
-            .padding(22)
-            .width(210)
+            .padding(18)
+            .width(204)
             .height(Fill)
-            .style(container::rounded_box),
-        content
+            .style(move |theme| material::sidebar(theme, solid)),
+        content,
     ]
+    .spacing(18)
+    .padding(16)
     .height(Fill)
-    .into()
+    .width(Fill);
+    if solid {
+        container(chrome).into()
+    } else {
+        stack![
+            image(material::backdrop(!material::dark(&theme)))
+                .width(Fill)
+                .height(Fill)
+                .content_fit(iced::ContentFit::Fill),
+            chrome
+        ]
+        .into()
+    }
 }
 
 fn new_download(app: &App) -> Element<'_, Message> {
@@ -180,25 +303,74 @@ fn new_download(app: &App) -> Element<'_, Message> {
         && app.installing.is_none()
         && app.inspecting.is_none()
         && app.dependencies.ready();
+    let mut scope_controls = row![].spacing(8);
+    for &scope in InspectScope::ALL {
+        let selected = app.scope == scope;
+        scope_controls = scope_controls.push(
+            button(text(scope.to_string()).size(13).font(material::MEDIUM))
+                .style(move |theme, status| {
+                    if selected {
+                        material::primary_button(theme, status)
+                    } else {
+                        material::secondary_button(theme, status)
+                    }
+                })
+                .on_press(Message::Scope(scope)),
+        );
+    }
     let mut top = column![
-        row![text("Add your links").size(18), space().width(Fill), button("Import URL list").style(button::secondary).on_press(Message::ImportUrls)].align_y(Alignment::Center),
-        text_editor(&app.urls).placeholder("https://www.youtube.com/watch?v=…\nOne URL per line").on_action(Message::EditUrls).height(105),
-        row![pick_list(InspectScope::ALL, Some(app.scope), Message::Scope), space().width(Fill), button(if app.inspecting.is_some() { "Inspecting…" } else { "Inspect links" }).padding([10, 18]).on_press_maybe(inspect_enabled.then_some(Message::Inspect))].align_y(Alignment::Center),
-        muted("For a video with playlist context, This video downloads only that video. Pure playlist links open the collection."),
-    ].spacing(12);
+        row![
+            row![
+                material::icon(material::Icon::Link, material::FOCUS),
+                column![
+                    text("Add your links").size(18).font(material::STRONG),
+                    muted("Videos, audio, or a whole playlist.")
+                ]
+                .spacing(4)
+            ]
+            .spacing(12)
+            .align_y(Alignment::Center)
+            .width(Fill),
+            button("Import list")
+                .style(material::quiet_button)
+                .on_press(Message::ImportUrls),
+        ]
+        .spacing(12)
+        .align_y(Alignment::Center),
+        text_editor(&app.urls)
+            .placeholder("Paste a video or playlist link…\nOne URL per line")
+            .on_action(Message::EditUrls)
+            .padding(16)
+            .size(14)
+            .height(112)
+            .style(material::editor),
+        row![
+            scope_controls,
+            space().width(Fill),
+            button(if app.inspecting.is_some() {
+                "Inspecting…"
+            } else {
+                "Inspect links"
+            })
+            .on_press_maybe(inspect_enabled.then_some(Message::Inspect)),
+        ]
+        .spacing(8)
+        .align_y(Alignment::Center),
+    ]
+    .spacing(16);
     if !app.dependencies.ready() && !app.discovering {
         top = top.push(
             row![
                 muted("Set up yt-dlp, FFmpeg and Deno to get started."),
                 button("Open setup")
-                    .style(button::text)
+                    .style(material::quiet_button)
                     .on_press(Message::Navigate(Screen::Settings))
             ]
             .spacing(12)
             .align_y(Alignment::Center),
         );
     }
-    let mut page = column![panel(top)].spacing(18);
+    let mut page = column![panel(app, top)].spacing(18);
     for (index, preview) in app.previews.iter().enumerate() {
         page = page.push(preview_card(app, index, preview));
     }
@@ -251,7 +423,7 @@ fn thumbnail<'a>(
             .height(height)
             .center_x(width)
             .center_y(height)
-            .style(container::bordered_box)
+            .style(material::inset)
             .into()
     }
 }
@@ -287,16 +459,16 @@ fn preview_card<'a>(app: &'a App, index: usize, preview: &'a MediaPreview) -> El
         body = body.push(
             row![
                 button("Select loaded")
-                    .style(button::secondary)
+                    .style(material::secondary_button)
                     .on_press(Message::SelectAll(index, true)),
                 button("Clear")
-                    .style(button::text)
+                    .style(material::quiet_button)
                     .on_press(Message::SelectAll(index, false)),
                 text_input("Range, e.g. 2-10", &app.range_input)
                     .on_input(Message::RangeInput)
                     .width(160),
                 button("Select range")
-                    .style(button::secondary)
+                    .style(material::secondary_button)
                     .on_press(Message::SelectRange(index)),
             ]
             .spacing(8)
@@ -330,34 +502,36 @@ fn preview_card<'a>(app: &'a App, index: usize, preview: &'a MediaPreview) -> El
             .align_y(Alignment::Center);
             if let Some(url) = entry_url {
                 entry_row = entry_row.push(
-                    button("Inspect video").style(button::text).on_press_maybe(
-                        (entry.unavailable.is_none() && app.inspecting.is_none())
-                            .then_some(Message::InspectEntry(url)),
-                    ),
+                    button("Inspect video")
+                        .style(material::quiet_button)
+                        .on_press_maybe(
+                            (entry.unavailable.is_none() && app.inspecting.is_none())
+                                .then_some(Message::InspectEntry(url)),
+                        ),
                 );
             }
-            entries = entries.push(
-                container(entry_row)
-                    .padding(8)
-                    .style(container::bordered_box),
-            );
+            entries = entries.push(container(entry_row).padding(8).style(material::inset));
         }
-        body = body.push(scrollable(entries).height(Length::Fixed(300.0)));
+        body = body.push(
+            scrollable(entries)
+                .style(material::scroll)
+                .height(Length::Fixed(300.0)),
+        );
         if preview.next_page.is_some() {
             body = body.push(
                 button("Load next 50 entries")
-                    .style(button::secondary)
+                    .style(material::secondary_button)
                     .on_press_maybe(app.inspecting.is_none().then_some(Message::LoadMore(index))),
             );
         }
         body = body.push(muted("Selection applies to loaded entries. Inspect video opens that item individually for exact format selection."));
     }
-    panel(body)
+    panel(app, body)
 }
 
 fn options(app: &App) -> Element<'_, Message> {
     let mut body = column![
-        text("Download options").size(18),
+        text("Download options").size(18).font(material::STRONG),
         row![
             field(
                 "Media",
@@ -426,7 +600,7 @@ fn options(app: &App) -> Element<'_, Message> {
                 .on_input(Message::Destination)
                 .width(Fill),
                 button("Browse")
-                    .style(button::secondary)
+                    .style(material::secondary_button)
                     .on_press(Message::BrowseDestination(false))
             ]
             .spacing(8),
@@ -457,7 +631,7 @@ fn options(app: &App) -> Element<'_, Message> {
                 .on_input(Message::PresetName)
                 .width(Fill),
             button("Save preset")
-                .style(button::secondary)
+                .style(material::secondary_button)
                 .on_press(Message::SavePreset),
         ]
         .spacing(8),
@@ -465,16 +639,16 @@ fn options(app: &App) -> Element<'_, Message> {
     if let Some(name) = &app.selected_preset {
         body = body.push(
             button("Delete selected preset")
-                .style(button::text)
+                .style(material::quiet_button)
                 .on_press(Message::DeletePreset(name.clone())),
         );
     }
     body = body.push(
         button("Use these options as defaults")
-            .style(button::text)
+            .style(material::quiet_button)
             .on_press(Message::SaveDefaults),
     );
-    panel(body)
+    panel(app, body)
 }
 
 fn queue(app: &App, history: bool) -> Element<'_, Message> {
@@ -492,7 +666,7 @@ fn queue(app: &App, history: bool) -> Element<'_, Message> {
                 muted(format!("{} finished item(s)", jobs.len())),
                 space().width(Fill),
                 button("Clear finished history")
-                    .style(button::secondary)
+                    .style(material::secondary_button)
                     .on_press(Message::ClearFinished)
             ]
             .align_y(Alignment::Center),
@@ -507,7 +681,7 @@ fn queue(app: &App, history: bool) -> Element<'_, Message> {
             .filter(|j| matches!(j.state, JobState::Completed | JobState::Skipped))
             .count();
         let total = app.state.queue.jobs.len();
-        page = page.push(panel(column![
+        page = page.push(panel(app, column![
             row![text(if running { "Queue running" } else { "Queue paused" }).size(18), space().width(Fill),
                 button(if running { "Hold queued jobs" } else { "Start / resume" }).on_press(if running { Message::HoldQueue } else { Message::StartQueue })].align_y(Alignment::Center),
             muted(format!("{completed} of {total} items completed · {} concurrent downloads", app.state.settings.concurrency)),
@@ -517,6 +691,7 @@ fn queue(app: &App, history: bool) -> Element<'_, Message> {
     }
     if jobs.is_empty() {
         page = page.push(panel(
+            app,
             column![
                 text(if history {
                     "No finished downloads yet"
@@ -530,7 +705,7 @@ fn queue(app: &App, history: bool) -> Element<'_, Message> {
                     "Inspect a link and add selected items to start building your queue."
                 }),
                 button("Add a download")
-                    .style(button::secondary)
+                    .style(material::secondary_button)
                     .on_press(Message::Navigate(Screen::NewDownload)),
             ]
             .spacing(12),
@@ -548,7 +723,7 @@ fn queue(app: &App, history: bool) -> Element<'_, Message> {
 fn job_card<'a>(app: &'a App, job: &'a DownloadJob) -> Element<'a, Message> {
     let mut body = column![
         row![
-            text(&job.title).size(16).width(Fill),
+            text(&job.title).size(16).font(material::MEDIUM).width(Fill),
             text(job.state.to_string()).size(13)
         ]
         .spacing(12)
@@ -590,7 +765,7 @@ fn job_card<'a>(app: &'a App, job: &'a DownloadJob) -> Element<'a, Message> {
     if job.state.active() || job.state == JobState::Queued {
         actions = actions.push(
             button("Cancel")
-                .style(button::secondary)
+                .style(material::secondary_button)
                 .on_press(Message::CancelJob(job.id)),
         );
     }
@@ -609,7 +784,7 @@ fn job_card<'a>(app: &'a App, job: &'a DownloadJob) -> Element<'a, Message> {
     if !job.state.active() {
         actions = actions.push(
             button("Remove")
-                .style(button::text)
+                .style(material::quiet_button)
                 .on_press(Message::RemoveJob(job.id)),
         );
     }
@@ -621,12 +796,12 @@ fn job_card<'a>(app: &'a App, job: &'a DownloadJob) -> Element<'a, Message> {
         actions = actions
             .push(
                 button("Open file")
-                    .style(button::secondary)
+                    .style(material::secondary_button)
                     .on_press(Message::OpenFile(path.clone())),
             )
             .push(
                 button("Open folder")
-                    .style(button::secondary)
+                    .style(material::secondary_button)
                     .on_press(Message::OpenFolder(path.clone())),
             );
     }
@@ -636,7 +811,7 @@ fn job_card<'a>(app: &'a App, job: &'a DownloadJob) -> Element<'a, Message> {
         } else {
             "Show log"
         })
-        .style(button::text)
+        .style(material::quiet_button)
         .on_press(Message::ToggleLog(job.id)),
     );
     body = body.push(actions);
@@ -646,15 +821,20 @@ fn job_card<'a>(app: &'a App, job: &'a DownloadJob) -> Element<'a, Message> {
         } else {
             job.logs.join("\n")
         };
-        body = body.push(scrollable(text(log).font(iced::Font::MONOSPACE).size(11)).height(150));
+        body = body.push(
+            scrollable(text(log).font(iced::Font::MONOSPACE).size(12))
+                .style(material::scroll)
+                .height(150),
+        );
     }
-    panel(body)
+    panel(app, body)
 }
 
 fn settings(app: &App) -> Element<'_, Message> {
     let mut page = column![panel(
+        app,
         column![
-            text("Preferences").size(18),
+            text("Preferences").size(18).font(material::STRONG),
             row![
                 field(
                     "Appearance",
@@ -676,6 +856,10 @@ fn settings(app: &App) -> Element<'_, Message> {
                 ),
             ]
             .spacing(14),
+            checkbox(app.state.settings.reduce_transparency)
+                .label("Reduce transparency")
+                .on_toggle(Message::ReduceTransparency),
+            muted("Use solid surfaces and remove ambient lighting for clearer separation."),
             row![
                 column![
                     muted("Default destination"),
@@ -692,7 +876,7 @@ fn settings(app: &App) -> Element<'_, Message> {
                 .spacing(5)
                 .width(Fill),
                 button("Change folder")
-                    .style(button::secondary)
+                    .style(material::secondary_button)
                     .on_press(Message::BrowseDestination(true))
             ]
             .align_y(Alignment::Center),
@@ -701,8 +885,8 @@ fn settings(app: &App) -> Element<'_, Message> {
         .spacing(14)
     )]
     .spacing(18);
-    page = page.push(row![column![text("Download tools").size(20), muted("Detected locally or installed into your user data folder. No administrator access needed.")].spacing(5).width(Fill),
-        button(if app.discovering { "Checking…" } else { "Check tools" }).style(button::secondary).on_press_maybe((!app.tools_busy()).then_some(Message::Discover))].spacing(12).align_y(Alignment::Center));
+    page = page.push(row![column![text("Download tools").size(20).font(material::STRONG), muted("Detected locally or installed into your user data folder. No administrator access needed.")].spacing(5).width(Fill),
+        button(if app.discovering { "Checking…" } else { "Check tools" }).style(material::secondary_button).on_press_maybe((!app.tools_busy()).then_some(Message::Discover))].spacing(12).align_y(Alignment::Center));
     for &kind in ToolKind::ALL {
         let status = app.dependencies.tools.get(&kind);
         let idle = !app.tools_busy();
@@ -715,7 +899,7 @@ fn settings(app: &App) -> Element<'_, Message> {
             .unwrap_or_default();
         let mut body = column![
             row![
-                text(kind.to_string()).size(18),
+                text(kind.to_string()).size(17).font(material::STRONG),
                 space().width(Fill),
                 muted(status.map(|s| s.source.as_str()).unwrap_or("Checking…"))
             ]
@@ -739,10 +923,10 @@ fn settings(app: &App) -> Element<'_, Message> {
                     .on_input_maybe(idle.then_some(move |p| Message::ToolPath(kind, p)))
                     .width(Fill),
                 button("Browse")
-                    .style(button::secondary)
+                    .style(material::secondary_button)
                     .on_press_maybe(idle.then_some(Message::BrowseTool(kind))),
                 button("Auto")
-                    .style(button::text)
+                    .style(material::quiet_button)
                     .on_press_maybe(idle.then_some(Message::UseAutomaticTool(kind))),
             ]
             .spacing(8),
@@ -756,7 +940,7 @@ fn settings(app: &App) -> Element<'_, Message> {
         if app.installing == Some(kind) {
             body = body.push(
                 button("Cancel setup")
-                    .style(button::secondary)
+                    .style(material::secondary_button)
                     .on_press(Message::CancelInstall),
             );
         } else {
@@ -772,7 +956,7 @@ fn settings(app: &App) -> Element<'_, Message> {
                     } else {
                         "Update managed tool"
                     })
-                    .style(button::secondary)
+                    .style(material::secondary_button)
                     .on_press_maybe(idle.then_some(Message::Install(kind, true))),
                 );
             }
@@ -781,13 +965,13 @@ fn settings(app: &App) -> Element<'_, Message> {
         if kind == ToolKind::Ffmpeg {
             body = body.push(muted("FFmpeg and ffprobe must be in the same folder. macOS approved versions advance with the app catalog."));
         }
-        page = page.push(panel(body));
+        page = page.push(panel(app, body));
     }
     if app.tools_busy() {
         page = page.push(muted("Dependency changes are disabled while tools are in use. Hold the queue and finish or cancel active jobs first."));
     }
     if app.storage_failed {
-        page = page.push(panel(column![
+        page = page.push(panel(app, column![
             text("Saving failed; queued downloads are paused").size(17),
             muted("Fix disk space or folder permissions, then retry saving. Existing files have been preserved."),
             button("Retry saving").on_press(Message::RetrySaving),
@@ -796,8 +980,8 @@ fn settings(app: &App) -> Element<'_, Message> {
     if app.storage_blocked {
         page = page.push(text("Local state could not be restored. Existing files are preserved and saving is disabled. See README recovery instructions.").size(14).style(text::danger));
     }
-    page.push(panel(column![text("Local data").size(18), muted(app.data_directory().to_string_lossy().into_owned()),
-        button("Open data folder").style(button::secondary).on_press(Message::OpenFolder(app.data_directory().to_path_buf())),
+    page.push(panel(app, column![text("Local data").size(18).font(material::STRONG), muted(app.data_directory().to_string_lossy().into_owned()),
+        button("Open data folder").style(material::secondary_button).on_press(Message::OpenFolder(app.data_directory().to_path_buf())),
         muted("Preferences, presets, queue and history stay on this device. Cookie and account access are outside this release."),
     ].spacing(12))).into()
 }
