@@ -14,7 +14,7 @@ New download uses a single continuous form instead of separate input and options
 
 - Neutral charcoal and soft white themes, compact metadata, and medium-weight titles keep the focus on media.
 - Rounded 16:9 thumbnails carry a dark duration badge. Unknown durations display an em dash.
-- Red is reserved for the app's small play mark. Download actions use high-contrast neutral buttons; blue identifies focus and progress.
+- The original app mark combines a download arrow and a play cutout in a monochrome tile. The same SVG supplies the UI, Windows executable/installer icon, window icon, and macOS bundle icon. Download actions use high-contrast neutral buttons; blue identifies focus and progress.
 - A floating sidebar provides navigation, queue counts, and activity at a glance. New download keeps its selection count and queue action outside the scrolling content.
 - Media type, quality/container or audio format/bitrate, and destination remain visible. **More options** reveals playlist folders, exact streams, filename templates, presets, saved defaults, and detailed output guidance. Collapsing these controls preserves their values and indicates when an exact selection remains active.
 

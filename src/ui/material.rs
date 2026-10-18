@@ -462,5 +462,9 @@ pub fn icon(kind: Icon, color: Color) -> svg::Svg<'static> {
 }
 
 pub fn brand() -> svg::Svg<'static> {
-    svg::Svg::new(svg::Handle::from_memory(b"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 28'><rect x='1' y='2' width='34' height='24' rx='8' fill='#FF0000'/><path d='m15 8 10 6-10 6z' fill='white'/></svg>".as_slice())).width(32).height(26)
+    svg::Svg::new(svg::Handle::from_memory(
+        include_bytes!("../../assets/branding/logo.svg").as_slice(),
+    ))
+    .width(28)
+    .height(28)
 }
