@@ -14,6 +14,8 @@ A native Rust + iced desktop front end for yt-dlp. Inspect media, select playlis
 
 ## First use
 
+The interface combines YouTube-style media previews with Apple-inspired glass panels, a floating sidebar, and a persistent queue action. Choose dark, light, or system appearance in **Settings**, or enable **Reduce transparency** for solid surfaces. **More options** reveals exact streams, filename templates, and presets. See [UI_DESIGN.md](docs/UI_DESIGN.md) for the design references and material details.
+
 1. Open **Settings** and install the approved tools, or choose existing executables. FFmpeg and ffprobe must be in the same directory. Tool discovery prefers configured paths, then managed tools, then PATH.
 2. Paste links in **New download** and select **Inspect links**. Pure collection links open as playlists; video links with playlist context default to **This video**.
 3. Select entries and output options. Playlist ranges affect loaded entries only; **Load next 50 entries** extends the list.
