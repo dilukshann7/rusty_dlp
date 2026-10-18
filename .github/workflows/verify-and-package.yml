@@ -1,0 +1,66 @@
+name: Verify and package (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: Create unsigned release archives after checks
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-2022
+            target: x86_64-pc-windows-msvc
+            platform: windows-x86_64
+          - runner: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            platform: linux-x86_64
+          - runner: macos-15-intel
+            target: x86_64-apple-darwin
+            platform: macos-x86_64
+          - runner: macos-15
+            target: aarch64-apple-darwin
+            platform: macos-aarch64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+          targets: ${{ matrix.target }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Linux development libraries
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y pkg-config liblzma-dev libxkbcommon-dev libwayland-dev libx11-dev libxi-dev libxcursor-dev libxrandr-dev
+      - name: Formatting
+        run: cargo fmt --all -- --check
+      - name: Packaging fixtures (no binary execution)
+        run: python -m unittest discover -s tools -p test_tools.py -v
+      - name: Offline fixtures and integration tests
+        run: cargo test --locked --features test-support --target ${{ matrix.target }}
+      - name: Static Rust analysis
+        run: cargo clippy --locked --all-targets --features test-support --target ${{ matrix.target }}
+      - name: Release binary
+        if: inputs.package
+        run: cargo build --locked --release --bin rusty-dlp --target ${{ matrix.target }}
+      - name: Package unsigned artifact
+        if: inputs.package
+        run: python tools/package.py --target ${{ matrix.target }} --platform ${{ matrix.platform }}
+      - uses: actions/upload-artifact@v4
+        if: inputs.package
+        with:
+          name: rusty-dlp-${{ matrix.platform }}
+          path: dist/*
+          if-no-files-found: error
