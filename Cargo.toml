@@ -5,7 +5,7 @@ edition = "2024"
 rust-version = "1.88"
 description = "A native desktop download manager for yt-dlp"
 license = "MIT"
-autobins = false
+default-run = "rusty-dlp"
 
 [dependencies]
 iced = { version = "=0.14.0", default-features = false, features = ["wgpu", "tiny-skia", "tokio", "image-without-codecs", "x11", "wayland", "linux-theme-detection", "crisp"] }
