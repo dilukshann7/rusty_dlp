@@ -1,12 +1,12 @@
-//! Native iced interpretation of the supplied YouTube and Apple design references.
+//! Native iced materials with Vercel-inspired neutral surfaces and media layouts.
 //!
 //! Glass uses alpha-composited gradients, specular borders and static, diffuse
 //! lighting. It does not sample/blur the live framebuffer or require OS vibrancy.
 use iced::{
     Background, Border, Color, Font, Radians, Shadow, Theme, Vector, gradient,
     widget::{
-        button, checkbox, container, image, pick_list, progress_bar, scrollable, svg, text_editor,
-        text_input,
+        button, checkbox, container, image, overlay::menu, pick_list, progress_bar, scrollable,
+        svg, text_editor, text_input,
     },
 };
 use std::sync::OnceLock;
@@ -21,6 +21,9 @@ pub const MEDIUM: Font = Font {
 };
 pub const BRAND: Color = Color::from_rgb8(255, 0, 0);
 pub const FOCUS: Color = Color::from_rgb8(62, 166, 255);
+pub const CONTROL_HEIGHT: f32 = 44.0;
+pub const CONTROL_LINE_HEIGHT: iced::widget::text::LineHeight =
+    iced::widget::text::LineHeight::Absolute(iced::Pixels(20.0));
 
 pub fn dark(theme: &Theme) -> bool {
     theme.palette().background.r < 0.5
@@ -32,17 +35,13 @@ fn gray(value: u8) -> Color {
     Color::from_rgb8(value, value, value)
 }
 pub fn secondary(theme: &Theme) -> Color {
-    if dark(theme) { gray(181) } else { gray(86) }
+    if dark(theme) { gray(161) } else { gray(86) }
 }
 fn line(theme: &Theme) -> Color {
-    if dark(theme) {
-        alpha(Color::WHITE, 0.13)
-    } else {
-        alpha(Color::BLACK, 0.10)
-    }
+    if dark(theme) { gray(51) } else { gray(224) }
 }
 fn control(theme: &Theme) -> Color {
-    if dark(theme) { gray(39) } else { gray(242) }
+    if dark(theme) { gray(26) } else { gray(250) }
 }
 fn linear(top: Color, bottom: Color) -> Background {
     gradient::Linear::new(Radians(1.15))
@@ -58,10 +57,10 @@ pub fn theme(light: bool) -> Theme {
             background: if light {
                 Color::from_rgb8(247, 248, 250)
             } else {
-                gray(15)
+                gray(10)
             },
-            text: if light { gray(15) } else { gray(248) },
-            primary: FOCUS,
+            text: if light { gray(15) } else { gray(237) },
+            primary: if light { gray(15) } else { gray(237) },
             success: if light {
                 Color::from_rgb8(32, 118, 80)
             } else {
@@ -84,9 +83,9 @@ pub fn theme(light: bool) -> Theme {
 pub fn glass(theme: &Theme, solid: bool) -> container::Style {
     let is_dark = dark(theme);
     let background = if solid {
-        (if is_dark { gray(31) } else { Color::WHITE }).into()
+        (if is_dark { gray(17) } else { Color::WHITE }).into()
     } else if is_dark {
-        linear(alpha(gray(56), 0.72), alpha(gray(26), 0.82))
+        linear(alpha(gray(23), 0.96), alpha(gray(17), 0.98))
     } else {
         linear(alpha(Color::WHITE, 0.88), alpha(Color::WHITE, 0.65))
     };
@@ -94,15 +93,13 @@ pub fn glass(theme: &Theme, solid: bool) -> container::Style {
         text_color: Some(theme.palette().text),
         background: Some(background),
         border: Border {
-            color: if solid {
+            color: if solid || is_dark {
                 line(theme)
-            } else if is_dark {
-                alpha(Color::WHITE, 0.16)
             } else {
                 alpha(Color::WHITE, 0.96)
             },
             width: 1.0,
-            radius: 24.0.into(),
+            radius: 16.0.into(),
         },
         shadow: if solid {
             Shadow::default()
@@ -121,12 +118,12 @@ pub fn sidebar(theme: &Theme, solid: bool) -> container::Style {
     let mut style = glass(theme, solid);
     if !solid {
         style.background = Some(if dark(theme) {
-            linear(alpha(gray(43), 0.87), alpha(gray(23), 0.93))
+            linear(alpha(gray(17), 0.98), alpha(gray(17), 0.96))
         } else {
             linear(alpha(Color::WHITE, 0.88), alpha(gray(246), 0.87))
         });
     }
-    style.border.radius = 28.0.into();
+    style.border.radius = 20.0.into();
     style
 }
 
@@ -134,9 +131,9 @@ pub fn inset(theme: &Theme) -> container::Style {
     container::Style {
         background: Some(control(theme).into()),
         border: Border {
-            radius: 14.0.into(),
+            radius: 10.0.into(),
             color: line(theme),
-            width: 0.5,
+            width: 1.0,
         },
         ..Default::default()
     }
@@ -185,7 +182,7 @@ pub fn primary_button(theme: &Theme, status: button::Status) -> button::Style {
         }
         _ => {
             if is_dark {
-                gray(240)
+                gray(237)
             } else {
                 gray(15)
             }
@@ -195,20 +192,8 @@ pub fn primary_button(theme: &Theme, status: button::Status) -> button::Style {
         background: Some(fill.into()),
         text_color: if is_dark { gray(15) } else { Color::WHITE },
         border: Border {
-            radius: 18.0.into(),
+            radius: 10.0.into(),
             ..Default::default()
-        },
-        shadow: Shadow {
-            color: alpha(Color::BLACK, if is_dark { 0.14 } else { 0.08 }),
-            offset: Vector::new(
-                0.0,
-                if matches!(status, button::Status::Pressed) {
-                    0.0
-                } else {
-                    2.0
-                },
-            ),
-            blur_radius: 8.0,
         },
         ..Default::default()
     };
@@ -225,14 +210,14 @@ pub fn secondary_button(theme: &Theme, status: button::Status) -> button::Style 
     let fill = match status {
         button::Status::Pressed => {
             if is_dark {
-                gray(67)
+                gray(46)
             } else {
                 gray(218)
             }
         }
         button::Status::Hovered => {
             if is_dark {
-                gray(58)
+                gray(36)
             } else {
                 gray(230)
             }
@@ -240,23 +225,16 @@ pub fn secondary_button(theme: &Theme, status: button::Status) -> button::Style 
         _ => control(theme),
     };
     button::Style {
-        background: Some(linear(
-            fill,
-            if is_dark {
-                gray((fill.r * 255.0) as u8).scale_alpha(0.95)
-            } else {
-                fill
-            },
-        )),
+        background: Some(fill.into()),
         text_color: if matches!(status, button::Status::Disabled) {
             secondary(theme)
         } else {
             theme.palette().text
         },
         border: Border {
-            radius: 18.0.into(),
+            radius: 10.0.into(),
             color: line(theme),
-            width: 0.5,
+            width: 1.0,
         },
         ..Default::default()
     }
@@ -272,7 +250,7 @@ pub fn quiet_button(theme: &Theme, status: button::Status) -> button::Style {
             theme.palette().text
         },
         border: Border {
-            radius: 16.0.into(),
+            radius: 10.0.into(),
             ..Default::default()
         },
         ..Default::default()
@@ -292,8 +270,8 @@ pub fn input(theme: &Theme, status: text_input::Status) -> text_input::Style {
     text_input::Style {
         background: control(theme).into(),
         border: Border {
-            radius: 13.0.into(),
-            width: if focused { 1.5 } else { 0.75 },
+            radius: 10.0.into(),
+            width: if focused { 1.5 } else { 1.0 },
             color: if focused { FOCUS } else { line(theme) },
         },
         icon: secondary(theme),
@@ -308,8 +286,8 @@ pub fn editor(theme: &Theme, status: text_editor::Status) -> text_editor::Style 
     text_editor::Style {
         background: control(theme).into(),
         border: Border {
-            radius: 18.0.into(),
-            width: if focused { 1.5 } else { 0.75 },
+            radius: 10.0.into(),
+            width: if focused { 1.5 } else { 1.0 },
             color: if focused { FOCUS } else { line(theme) },
         },
         placeholder: secondary(theme),
@@ -325,14 +303,47 @@ pub fn select(theme: &Theme, status: pick_list::Status) -> pick_list::Style {
         handle_color: secondary(theme),
         background: control(theme).into(),
         border: Border {
-            radius: 13.0.into(),
-            width: 0.75,
+            radius: 10.0.into(),
+            width: 1.0,
             color: if matches!(status, pick_list::Status::Opened { .. }) {
                 FOCUS
             } else {
                 line(theme)
             },
         },
+    }
+}
+
+/// Pick-list overlays are a separate widget; style them explicitly as part of
+/// the same surface system instead of inheriting iced's blue selection menu.
+pub fn select_menu(theme: &Theme) -> menu::Style {
+    menu::Style {
+        background: (if dark(theme) { gray(17) } else { Color::WHITE }).into(),
+        border: Border {
+            color: line(theme),
+            width: 1.0,
+            radius: 10.0.into(),
+        },
+        text_color: theme.palette().text,
+        selected_text_color: theme.palette().text,
+        selected_background: (if dark(theme) { gray(38) } else { gray(240) }).into(),
+        shadow: Shadow {
+            color: alpha(Color::BLACK, if dark(theme) { 0.40 } else { 0.12 }),
+            offset: Vector::new(0.0, 8.0),
+            blur_radius: 20.0,
+        },
+    }
+}
+
+pub fn segmented(theme: &Theme) -> container::Style {
+    container::Style {
+        background: Some((if dark(theme) { gray(10) } else { gray(242) }).into()),
+        border: Border {
+            color: line(theme),
+            width: 1.0,
+            radius: 12.0.into(),
+        },
+        ..Default::default()
     }
 }
 
@@ -404,23 +415,9 @@ pub fn backdrop(light: bool) -> image::Handle {
                     let glow = |cx: f32, cy: f32, spread: f32| {
                         (-((px - cx).powi(2) + (py - cy).powi(2)) / spread).exp()
                     };
-                    let red = glow(0.02, 0.05, 0.09);
-                    let blue = glow(0.98, 0.12, 0.10);
                     let silver = glow(0.48, 0.85, 0.25);
-                    let base = if light { 246.0 } else { 15.0 };
-                    let colors = if light {
-                        [
-                            base + red * 7.0 - blue * 12.0,
-                            base - red * 10.0 - blue * 5.0,
-                            base - red * 9.0 + blue * 5.0,
-                        ]
-                    } else {
-                        [
-                            base + red * 25.0 + silver * 9.0 + blue * 2.0,
-                            base + red * 3.0 + silver * 11.0 + blue * 9.0,
-                            base + red * 6.0 + silver * 16.0 + blue * 23.0,
-                        ]
-                    };
+                    let base = if light { 247.0 } else { 10.0 };
+                    let colors = [base + silver * 3.0; 3];
                     pixels.extend(colors.map(|c| c.clamp(0.0, 255.0) as u8));
                     pixels.push(255);
                 }
