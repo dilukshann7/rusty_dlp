@@ -168,18 +168,15 @@ pub async fn discover_dependencies(settings: Settings) -> DependencyReport {
         if let Some(path) = settings.tool_paths.get(&kind) {
             candidates.push((path.clone(), "Configured".to_string()));
         }
-        if let Some(root) = &root {
-            if let Ok(bytes) = fs::read(root.join("tools").join(kind.key()).join("active.json")) {
-                if let Ok(installed) = serde_json::from_slice::<InstalledDependency>(&bytes) {
-                    // Ignore a pointer outside this tool's managed directory.
-                    if installed
-                        .path
-                        .starts_with(root.join("tools").join(kind.key()))
-                    {
-                        candidates
-                            .push((installed.path, format!("Managed ({})", installed.version)));
-                    }
-                }
+        if let Some(root) = &root
+            && let Ok(bytes) = fs::read(root.join("tools").join(kind.key()).join("active.json"))
+            && let Ok(installed) = serde_json::from_slice::<InstalledDependency>(&bytes)
+        {
+            let base = root.join("tools").join(kind.key());
+            if installed.kind == kind
+                && let Some(path) = resolve_managed_path(&base, &installed.path)
+            {
+                candidates.push((path, format!("Managed ({})", installed.version)));
             }
         }
         candidates.extend(
@@ -225,6 +222,21 @@ pub async fn discover_dependencies(settings: Settings) -> DependencyReport {
         report.tools.insert(kind, status);
     }
     report
+}
+
+/// Resolve relative portable pointers and legacy contained absolute pointers.
+/// Canonicalization also rejects symlinks escaping this managed tool folder.
+pub fn resolve_managed_path(base: &Path, path: &Path) -> Option<PathBuf> {
+    let base = base.canonicalize().ok()?;
+    if !path.is_absolute()
+        && path
+            .components()
+            .any(|c| !matches!(c, Component::Normal(_)))
+    {
+        return None;
+    }
+    let resolved = base.join(path).canonicalize().ok()?;
+    (resolved.starts_with(&base) && resolved.is_file()).then_some(resolved)
 }
 
 pub fn verify_sha256(path: &Path, expected: &str) -> Result<(), EngineError> {
@@ -339,10 +351,9 @@ fn extract_with_cancel(
                     .file_name()
                     .and_then(|n| n.to_str())
                     .filter(|n| outputs.iter().any(|o| o == n))
+                    && !entry.is_dir()
                 {
-                    if !entry.is_dir() {
-                        copy_executable(&mut entry, &staging.join(name), cancellation)?;
-                    }
+                    copy_executable(&mut entry, &staging.join(name), cancellation)?;
                 }
             }
         }
@@ -367,10 +378,9 @@ fn extract_with_cancel(
                     .file_name()
                     .and_then(|n| n.to_str())
                     .filter(|n| outputs.iter().any(|o| o == n))
+                    && entry.header().entry_type().is_file()
                 {
-                    if entry.header().entry_type().is_file() {
-                        copy_executable(&mut entry, &staging.join(name), cancellation)?;
-                    }
+                    copy_executable(&mut entry, &staging.join(name), cancellation)?;
                 }
             }
         }
@@ -532,8 +542,14 @@ pub async fn activate_staged(
         version: entry.version.clone(),
         source: entry.source.clone(),
     };
-    let bytes = serde_json::to_vec_pretty(&installed)?;
-    let mut pointer = tempfile::NamedTempFile::new_in(&base)?;
+    let mut portable_pointer = installed.clone();
+    portable_pointer.path = installed
+        .path
+        .strip_prefix(base)
+        .map_err(|e| EngineError::Message(e.to_string()))?
+        .to_path_buf();
+    let bytes = serde_json::to_vec_pretty(&portable_pointer)?;
+    let mut pointer = tempfile::NamedTempFile::new_in(base)?;
     pointer.write_all(&bytes)?;
     pointer.as_file().sync_all()?;
     // Keep the version directory before activation; a failed pointer write preserves the previous version.

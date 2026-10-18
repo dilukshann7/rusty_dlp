@@ -15,10 +15,10 @@ use std::{
 use tokio_util::sync::CancellationToken;
 
 pub fn destination(job: &DownloadJob) -> PathBuf {
-    if job.options.playlist_folder {
-        if let Some(title) = &job.playlist_title {
-            return job.options.destination.join(safe_component(title));
-        }
+    if job.options.playlist_folder
+        && let Some(title) = &job.playlist_title
+    {
+        return job.options.destination.join(safe_component(title));
     }
     job.options.destination.clone()
 }
@@ -155,24 +155,18 @@ pub async fn start(
         })?;
     let preview = metadata::parse_preview(&job.url, &info, 1)?;
     formats::validate_exact(&job.options, &preview.formats)?;
-    if let Some(expected) = &job.media_id {
-        if preview.id.as_ref().is_some_and(|id| id != expected) {
-            return Err(EngineError::Message(
-                "This URL now points to a different media item. Inspect it again.".into(),
-            ));
-        }
+    if let Some(expected) = &job.media_id
+        && preview.id.as_ref().is_some_and(|id| id != expected)
+    {
+        return Err(EngineError::Message(
+            "This URL now points to a different media item. Inspect it again.".into(),
+        ));
     }
     let _write_probe = tempfile::NamedTempFile::new_in(&folder)
         .map_err(|e| EngineError::Message(format!("Destination is not writable: {e}")))?;
     let predicted = predicted_output(&job, &info);
     let _output_lock = if let Some(output) = &predicted {
-        Some(
-            crate::storage::lock_output(
-                &crate::storage::data_dir().map_err(|e| EngineError::Message(e.to_string()))?,
-                output,
-            )
-            .map_err(|e| EngineError::Message(e.to_string()))?,
-        )
+        Some(crate::storage::lock_output(output).map_err(|e| EngineError::Message(e.to_string()))?)
     } else {
         None
     };

@@ -4,6 +4,30 @@ use rusty_dlp::{
 };
 
 #[test]
+fn relative_managed_tools_survive_portable_folder_relocation() {
+    use rusty_dlp::engine::dependencies::resolve_managed_path;
+    let root = tempfile::tempdir().unwrap();
+    let old = root.path().join("old/tools/yt-dlp");
+    std::fs::create_dir_all(old.join("version")).unwrap();
+    std::fs::write(old.join("version/tool.exe"), b"fixture").unwrap();
+    let moved = root.path().join("moved");
+    std::fs::rename(root.path().join("old"), &moved).unwrap();
+    let base = moved.join("tools/yt-dlp");
+    let relative = std::path::Path::new("version/tool.exe");
+    assert_eq!(
+        resolve_managed_path(&base, relative),
+        Some(base.join(relative).canonicalize().unwrap())
+    );
+    assert!(resolve_managed_path(&base, &old.join(relative)).is_none());
+    assert!(
+        resolve_managed_path(&base, std::path::Path::new("../yt-dlp/version/tool.exe")).is_none()
+    );
+    let outside = root.path().join("outside.exe");
+    std::fs::write(&outside, b"fixture").unwrap();
+    assert!(resolve_managed_path(&base, &outside).is_none());
+}
+
+#[test]
 fn catalog_covers_every_tool_on_every_release_target() {
     let entries = catalog().unwrap();
     for target in [

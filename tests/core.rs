@@ -248,10 +248,14 @@ fn future_state_schema_cannot_be_replaced_with_an_old_backup() {
 fn output_lock_serializes_equivalent_final_paths() {
     let directory = tempfile::tempdir().unwrap();
     let output = directory.path().join("same.mp4");
-    let first = rusty_dlp::storage::lock_output(directory.path(), &output).unwrap();
-    assert!(rusty_dlp::storage::lock_output(directory.path(), &output).is_err());
+    let first = rusty_dlp::storage::lock_output(&output).unwrap();
+    assert!(rusty_dlp::storage::lock_output(&output).is_err());
+    assert!(directory.path().join(".rusty-dlp-output-locks").is_dir());
+    let alias = directory.path().join("subfolder");
+    std::fs::create_dir(&alias).unwrap();
+    assert!(rusty_dlp::storage::lock_output(&alias.join("..").join("same.mp4")).is_err());
     drop(first);
-    assert!(rusty_dlp::storage::lock_output(directory.path(), &output).is_ok());
+    assert!(rusty_dlp::storage::lock_output(&output).is_ok());
 }
 
 #[test]
@@ -271,4 +275,20 @@ fn unknown_total_does_not_display_a_fake_percentage() {
         panic!("expected progress");
     };
     assert!(progress.percent().is_none());
+}
+
+#[test]
+fn portable_marker_keeps_state_beside_the_executable() {
+    use rusty_dlp::storage::portable_data_dir;
+    let folder = tempfile::tempdir().unwrap();
+    let executable = folder.path().join("rusty-dlp.exe");
+    assert_eq!(portable_data_dir(&executable), None);
+    std::fs::write(folder.path().join("portable.flag"), "").unwrap();
+    assert_eq!(
+        portable_data_dir(&executable),
+        Some(folder.path().join("data"))
+    );
+    std::fs::remove_file(folder.path().join("portable.flag")).unwrap();
+    std::fs::create_dir(folder.path().join("portable.flag")).unwrap();
+    assert_eq!(portable_data_dir(&executable), None);
 }

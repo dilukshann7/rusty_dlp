@@ -16,9 +16,21 @@ impl From<std::io::Error> for StorageError {
 }
 
 pub fn data_dir() -> Result<PathBuf, StorageError> {
+    if let Some(root) = portable_data_dir(&std::env::current_exe()?) {
+        return Ok(root);
+    }
     directories::ProjectDirs::from("dev", "RustyDLP", "RustyDLP")
         .map(|p| p.data_local_dir().to_path_buf())
         .ok_or_else(|| StorageError("Cannot find the application-data folder.".into()))
+}
+
+/// A portable archive opts into self-contained state with a marker beside the app.
+pub fn portable_data_dir(executable: &Path) -> Option<PathBuf> {
+    let folder = executable.parent()?;
+    folder
+        .join("portable.flag")
+        .is_file()
+        .then(|| folder.join("data"))
 }
 
 pub struct InstanceLock {
@@ -63,12 +75,12 @@ pub fn load_from(root: &Path) -> Result<(PersistedState, Option<String>), Storag
     }
     let primary = fs::read(&path)?;
     // A future schema must not be replaced by an older backup.
-    if let Ok(value) = serde_json::from_slice::<serde_json::Value>(&primary) {
-        if value["schema_version"].as_u64().is_some_and(|v| v != 1) {
-            return Err(StorageError(
-                "State was written by an incompatible app version. No files were changed.".into(),
-            ));
-        }
+    if let Ok(value) = serde_json::from_slice::<serde_json::Value>(&primary)
+        && value["schema_version"].as_u64().is_some_and(|v| v != 1)
+    {
+        return Err(StorageError(
+            "State was written by an incompatible app version. No files were changed.".into(),
+        ));
     }
     let (mut state, warning) = match decode(&primary) {
         Ok(state) => (state, None),
@@ -93,10 +105,10 @@ fn atomic_write(root: &Path, name: &str, bytes: &[u8]) -> Result<(), StorageErro
 pub fn save_to(root: &Path, state: &PersistedState) -> Result<(), StorageError> {
     fs::create_dir_all(root)?;
     let bytes = serde_json::to_vec_pretty(state).map_err(|e| StorageError(e.to_string()))?;
-    if let Ok(previous) = fs::read(root.join("state.json")) {
-        if decode(&previous).is_ok() {
-            atomic_write(root, "state.backup.json", &previous)?;
-        }
+    if let Ok(previous) = fs::read(root.join("state.json"))
+        && decode(&previous).is_ok()
+    {
+        atomic_write(root, "state.backup.json", &previous)?;
     }
     atomic_write(root, "state.json", &bytes)
 }
@@ -108,7 +120,7 @@ pub fn save_state(state: &PersistedState) -> Result<(), StorageError> {
     save_to(&data_dir()?, state)
 }
 
-pub fn lock_output(root: &Path, output: &Path) -> Result<File, StorageError> {
+pub fn lock_output(output: &Path) -> Result<File, StorageError> {
     use sha2::{Digest, Sha256};
     let absolute = std::path::absolute(output)?;
     let parent = absolute.parent().unwrap_or(Path::new(".")).canonicalize()?;
@@ -123,7 +135,8 @@ pub fn lock_output(root: &Path, output: &Path) -> Result<File, StorageError> {
     if cfg!(windows) || cfg!(target_os = "macos") {
         key = key.to_lowercase();
     }
-    let locks = root.join("output-locks");
+    // Installed and portable instances share ownership of each destination.
+    let locks = parent.join(".rusty-dlp-output-locks");
     fs::create_dir_all(&locks)?;
     let file = fs::OpenOptions::new()
         .read(true)
