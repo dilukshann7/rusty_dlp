@@ -129,14 +129,14 @@ pub fn safe_component(value: &str) -> String {
 pub fn redact(line: &str) -> String {
     line.split_whitespace()
         .map(|word| {
-            if word.starts_with("http://") || word.starts_with("https://") {
-                if let Ok(mut url) = url::Url::parse(word) {
-                    url.set_query(None);
-                    url.set_fragment(None);
-                    let _ = url.set_username("");
-                    let _ = url.set_password(None);
-                    return url.to_string();
-                }
+            if (word.starts_with("http://") || word.starts_with("https://"))
+                && let Ok(mut url) = url::Url::parse(word)
+            {
+                url.set_query(None);
+                url.set_fragment(None);
+                let _ = url.set_username("");
+                let _ = url.set_password(None);
+                return url.to_string();
             }
             word.chars().take(300).collect()
         })

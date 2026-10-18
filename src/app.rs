@@ -247,19 +247,18 @@ impl App {
     }
     fn persist(&mut self) {
         self.dirty_since = None;
-        if !self.storage_blocked {
-            if self
+        if !self.storage_blocked
+            && self
                 .writer
                 .sender
                 .send(StorageCommand::Save(self.state.clone()))
                 .is_err()
-            {
-                self.notice = Some(
-                    "The storage writer stopped. Restart the application before adding more work."
-                        .into(),
-                );
-                self.storage_blocked = true;
-            }
+        {
+            self.notice = Some(
+                "The storage writer stopped. Restart the application before adding more work."
+                    .into(),
+            );
+            self.storage_blocked = true;
         }
     }
     fn invalidate_inspection(&mut self) {
@@ -346,12 +345,11 @@ impl App {
             self.notice = Some("Exact format IDs apply to one inspected video. Use a quality policy for multiple videos or playlists.".into());
             return;
         }
-        if options.exact_format.is_some() {
-            if let Err(error) = engine::formats::validate_exact(&options, &self.previews[0].formats)
-            {
-                self.notice = Some(error.to_string());
-                return;
-            }
+        if options.exact_format.is_some()
+            && let Err(error) = engine::formats::validate_exact(&options, &self.previews[0].formats)
+        {
+            self.notice = Some(error.to_string());
+            return;
         }
         let mut added = 0;
         let mut errors = Vec::new();
@@ -599,17 +597,16 @@ impl App {
                 return Task::batch(tasks);
             }
             Message::LoadMore(index) => {
-                if self.inspecting.is_none() {
-                    if let Some(preview) = self.previews.get(index) {
-                        if let Some(page_start) = preview.next_page {
-                            self.pending_inspections.push_back(InspectionRequest {
-                                url: preview.url.clone(),
-                                scope: InspectScope::Playlist,
-                                page_start,
-                            });
-                            return self.next_inspection();
-                        }
-                    }
+                if self.inspecting.is_none()
+                    && let Some(preview) = self.previews.get(index)
+                    && let Some(page_start) = preview.next_page
+                {
+                    self.pending_inspections.push_back(InspectionRequest {
+                        url: preview.url.clone(),
+                        scope: InspectScope::Playlist,
+                        page_start,
+                    });
+                    return self.next_inspection();
                 }
             }
             Message::InspectEntry(url) => {
@@ -631,10 +628,10 @@ impl App {
                 }
             }
             Message::SelectEntry(p, e, selected) => {
-                if let Some(entry) = self.previews.get_mut(p).and_then(|p| p.entries.get_mut(e)) {
-                    if entry.unavailable.is_none() {
-                        entry.selected = selected;
-                    }
+                if let Some(entry) = self.previews.get_mut(p).and_then(|p| p.entries.get_mut(e))
+                    && entry.unavailable.is_none()
+                {
+                    entry.selected = selected;
                 }
             }
             Message::SelectAll(index, selected) => {

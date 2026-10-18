@@ -148,10 +148,10 @@ impl Queue {
     }
 
     pub fn retry(&mut self, id: Uuid) -> Result<(), String> {
-        if let Some(job) = self.jobs.iter().find(|job| job.id == id) {
-            if self.conflicts(job) {
-                return Err("Another queued job already targets this media and output. Remove it before retrying.".into());
-            }
+        if let Some(job) = self.jobs.iter().find(|job| job.id == id)
+            && self.conflicts(job)
+        {
+            return Err("Another queued job already targets this media and output. Remove it before retrying.".into());
         }
         if let Some(job) = self
             .jobs

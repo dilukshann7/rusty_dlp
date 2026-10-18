@@ -1049,7 +1049,7 @@ pub fn format_label(format: &FormatInfo) -> String {
             .fps
             .map(|f| format!("{f:.0} fps"))
             .unwrap_or_else(|| "—".into()),
-        format!(
+        format_args!(
             "{}/{}",
             format.video_codec.as_deref().unwrap_or("none"),
             format.audio_codec.as_deref().unwrap_or("none")

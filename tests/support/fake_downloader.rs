@@ -33,7 +33,7 @@ fn main() {
     std::fs::create_dir_all(&folder).unwrap();
     let scenario = args.last().cloned().unwrap_or_default();
     if scenario.contains("descendant") {
-        std::process::Command::new(std::env::current_exe().unwrap())
+        let mut child = std::process::Command::new(std::env::current_exe().unwrap())
             .args([
                 "--descendant",
                 folder.join("descendant-marker").to_str().unwrap(),
@@ -41,6 +41,7 @@ fn main() {
             .spawn()
             .unwrap();
         std::thread::sleep(Duration::from_secs(20));
+        let _ = child.wait();
         return;
     }
     if scenario.contains("slow") {
