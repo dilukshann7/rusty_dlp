@@ -17,6 +17,8 @@ class PackageTests(unittest.TestCase):
             (root / name).write_bytes((ROOT / name).read_bytes())
         (root / "assets").mkdir()
         (root / "assets" / "dependencies.json").write_bytes((ROOT / "assets" / "dependencies.json").read_bytes())
+        import shutil
+        shutil.copytree(ROOT / "assets" / "branding", root / "assets" / "branding")
         binary = root / "target" / target / "release" / ("rusty-dlp.exe" if platform.startswith("windows") else "rusty-dlp")
         binary.parent.mkdir(parents=True)
         binary.write_bytes(b"offline packaging fixture, not executable")
@@ -51,6 +53,12 @@ class PackageTests(unittest.TestCase):
                         self.assertTrue(binary.mode & 0o111)
                 self.assertTrue(any(name.endswith("/README.md") for name in names))
                 self.assertTrue(any(name.endswith("/THIRD_PARTY.md") for name in names))
+                self.assertTrue(any(name.endswith("/branding/logo.svg") for name in names))
+                if platform.startswith("windows"):
+                    self.assertTrue(archive.name.endswith("-portable.zip"))
+                    self.assertTrue(any(name.endswith("/portable.flag") for name in names))
+                if platform.startswith("macos"):
+                    self.assertTrue(any(name.endswith(".app/Contents/Resources/icon.icns") for name in names))
 
     def test_missing_binary_does_not_start_a_build(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -69,6 +77,25 @@ class PackageTests(unittest.TestCase):
             sentinel.write_text("keep")
             self.assertNotEqual(self.package(root, "x86_64-pc-windows-msvc", "windows-x86_64").returncode, 0)
             self.assertEqual(sentinel.read_text(), "keep")
+
+    def test_installer_refuses_missing_binary_without_invoking_compiler(self):
+        with tempfile.TemporaryDirectory() as folder:
+            result = subprocess.run([sys.executable, str(ROOT / "tools/build_installer.py"), "--root", folder, "--compiler", sys.executable], capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("Already-built binary not found", result.stderr)
+            self.assertFalse((pathlib.Path(folder) / "dist").exists())
+
+    def test_installer_does_not_replace_existing_output(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = pathlib.Path(folder)
+            self.fixture(root, "x86_64-pc-windows-msvc", "windows-x86_64")
+            (root / "dist").mkdir()
+            output = root / "dist/rusty_dlp-0.1.0-windows-x64-setup.exe"
+            output.write_bytes(b"preserve this installer")
+            result = subprocess.run([sys.executable, str(ROOT / "tools/build_installer.py"), "--root", folder, "--compiler", sys.executable], capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("Installer already exists", result.stderr)
+            self.assertEqual(output.read_bytes(), b"preserve this installer")
 
 
 if __name__ == "__main__":

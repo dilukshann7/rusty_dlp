@@ -1,38 +1,27 @@
-# Core implementation status — 2026-10-18
+# Verification status — 2026-10-18
 
-Source implementation is present for all seven approved tasks on `feat/core-desktop`.
+The core application, compact interface, branding, and Windows installer/portable packaging are implemented. The source supports Windows x64, Linux x64, Intel macOS, and Apple Silicon macOS; this release preparation targets Windows x64.
 
-| Task | Source delivered | Runtime validation |
-|---|---|---|
-| Foundation, four views, themes, data paths, instance lock | Yes | Deferred |
-| Dependency discovery, catalog, installer, managed updates | Yes | Deferred |
-| URL import, metadata, paged playlists and selection | Yes | Deferred |
-| Quality policies, exact formats, containers, audio and presets | Yes | Deferred |
-| Structured process engine, cancellation and output confirmation | Yes | Deferred |
-| Queue, history, settings, atomic state and backup recovery | Yes | Deferred |
-| Manual four-target packaging workflow and documentation | Yes | Fixture checks passed; release builds deferred |
+## Automated checks
 
-## Checks actually performed
+- `cargo fmt --all -- --check` and `git diff --check` pass.
+- `cargo test --locked --features test-support`: 42 tests pass on Windows, including format policies, queue transitions, persistence/recovery, checksums, unsafe archives, metadata, stderr flooding, process failures, and descendant cancellation.
+- `cargo clippy --locked --all-targets --features test-support -- -D warnings`: passes.
+- `python -m unittest discover -s tools -p test_tools.py -v`: five tests pass. Fixtures cover all four archive layouts, icons, portable markers, permissions, checksums, and preservation of existing outputs. Fixture bytes are not platform executables.
+- Independent source review identified and verified fixes for relocatable managed-tool pointers and output locking shared between installed and portable instances. Regression checks cover both behaviors.
+- The optimized Windows x64 build passes with the static C runtime. `--version` reports `rusty_dlp 0.1.0`, Windows finds the embedded executable icon/version metadata, and import inspection finds no external MSVC runtime or liblzma DLL dependency.
+- The actual Windows installer passed a silent installation/version-probe/uninstallation test in an isolated folder. It did not enable portable mode, removed its binary on uninstall, and preserved a user-owned data file. The GUI was not launched.
+- Installer and portable artifacts were created with individual SHA-256 files. Release publishing is separate from creating these local artifacts.
 
-- `cargo generate-lockfile`: resolved and pinned the dependency graph without compilation.
-- `cargo fetch --locked`: downloaded crate sources for API inspection; no compilation.
-- `cargo fmt --all -- --check`: passed.
-- `cargo metadata --locked --no-deps --format-version 1`: passed.
-- `python -m unittest discover -s tools -p test_tools.py -v`: three tests passed, including archive contents/permissions/checksums for all four target layouts using inert fixture bytes, missing-binary behavior, and preservation of existing package folders.
-- Refreshed the catalog from published upstream release metadata and checksums: 12 entries across four targets.
-- Fresh independent source review: addressed the shared-output concurrency finding; corrected retry duplicate bypass; prepared regression coverage. This was static inspection, not compiler validation.
-- Discovered and read an editor-owned `rust-analyzer` check cache: zero errors/warnings, newer than the current Rust source files. No compilation command was issued by this agent. This cache does not validate cross-platform builds or execute tests.
-- Forty Rust tests are prepared; none were executed. No app or media-tool installation was launched.
+## Distribution
 
-## Implementation choices
+- The original app mark is exported to SVG, PNG, multi-size ICO, and ICNS. Windows builds embed icon/version resources and set the window icon; macOS packaging includes its bundle icon.
+- The Windows installer uses Inno Setup, installs for the current user without elevation, offers shortcuts and an uninstaller, and preserves application data and downloaded media.
+- The Windows portable ZIP opts into adjacent `data/` storage using `portable.flag`. Managed tool pointers are relative; explicitly configured tool paths, output destinations, history, and queued jobs may still contain absolute paths.
+- A destination's `.rusty-dlp-output-locks` directory coordinates final output ownership across copies of the application. Lock files are harmless after the owning process exits.
+- Release binaries use the static Windows C runtime. Media tools download explicitly through Settings and are not bundled.
+- The four-target GitHub verification/packaging workflow remains manually triggered. No cross-platform workflow run is implied by this Windows release.
 
-- Changes stay in the requested checkout on a feature branch; no second worktree was created.
-- User instructions defer builds, app launches, Rust test compilation and workflow dispatch. Tests were prepared without claiming a verified RED/GREEN cycle. Compile and runtime defects remain possible until those checks are requested.
-- macOS FFmpeg managed updates use the approved shipped catalog; official GitHub-backed tools can fetch published release metadata through an explicit update action.
-- Per-job partial directories preserve resumable work. The scheduler serializes output namespaces that may collide, and predicted final paths have an OS file lock. Existing outputs are preserved; retaining multiple quality variants requires distinct filenames/destinations.
-- Both state-file corruption and transient write failures preserve existing files. Transient failures pause queued work and expose Retry saving; an unreadable/incompatible state blocks saves until recovery.
-- Dependency binaries are not bundled. No tools were installed into the user's app-data directory during implementation.
+## Verification limits
 
-## Still required before a verified release
-
-Run the Rust suite and compiler/static analysis when requested. Perform real GUI and dependency-install/download/conversion/cancel/resume/restart checks separately on Windows x64, Linux x64 and both macOS architectures. No platform is runtime-verified yet. No release binary, public release, signed artifact or workflow run was produced.
+This is an unsigned preview. GUI interaction, actual network media downloads, real dependency installation, conversion, and cancel/resume/restart smoke checks are still separate from the offline fixtures. Linux and macOS binaries and runtime behavior have not been verified on this Windows host. Signing, notarization, and application self-updates remain outside this release.

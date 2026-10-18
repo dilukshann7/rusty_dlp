@@ -54,10 +54,28 @@ jobs:
         run: cargo clippy --locked --all-targets --features test-support --target ${{ matrix.target }}
       - name: Release binary
         if: inputs.package
+        env:
+          CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_RUSTFLAGS: -C target-feature=+crt-static
         run: cargo build --locked --release --bin rusty-dlp --target ${{ matrix.target }}
       - name: Package unsigned artifact
         if: inputs.package
         run: python tools/package.py --target ${{ matrix.target }} --platform ${{ matrix.platform }}
+      - name: Windows installer
+        if: inputs.package && runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $compiler = 'C:/Program Files (x86)/Inno Setup 6/ISCC.exe'
+          if (!(Test-Path -LiteralPath $compiler)) {
+            $download = Join-Path $env:RUNNER_TEMP 'innosetup-6.7.3.exe'
+            $toolRoot = Join-Path $env:RUNNER_TEMP 'inno'
+            Invoke-WebRequest 'https://github.com/jrsoftware/issrc/releases/download/is-6_7_3/innosetup-6.7.3.exe' -OutFile $download
+            $signature = Get-AuthenticodeSignature -LiteralPath $download
+            if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'Pyrsys') { throw 'Unexpected compiler publisher' }
+            $process = Start-Process -FilePath $download -ArgumentList @('/PORTABLE=1', '/VERYSILENT', '/CURRENTUSER', '/SP-', '/NORESTART', ('/DIR="' + $toolRoot + '"')) -Wait -PassThru -WindowStyle Hidden
+            if ($process.ExitCode -ne 0) { throw 'Compiler setup failed' }
+            $compiler = Join-Path $toolRoot 'ISCC.exe'
+          }
+          python tools/build_installer.py --compiler $compiler
       - uses: actions/upload-artifact@v4
         if: inputs.package
         with:

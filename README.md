@@ -1,6 +1,18 @@
 # rusty_dlp
 
+<img src="assets/branding/logo.svg" width="64" height="64" alt="rusty_dlp logo">
+
 A native Rust + iced desktop front end for yt-dlp. Inspect media, select playlist entries and quality, and manage a persistent download queue.
+
+## Download
+
+Get the Windows x64 preview from [GitHub Releases](https://github.com/dilukshann7/rusty_dlp/releases).
+
+- **Installer:** `rusty_dlp-0.1.0-windows-x64-setup.exe` installs for the current user, adds a Start menu shortcut, offers a desktop shortcut, and includes an uninstaller. Administrator access is not required. Uninstalling preserves your settings and downloaded media.
+- **Portable:** extract `rusty-dlp-0.1.0-windows-x86_64-portable.zip` into a writable folder and open `rusty-dlp.exe`. Keep `portable.flag` beside the app: settings, queue, history, and managed tools stay in its `data/` folder. Downloaded media goes to the destination you select. Close the app before moving the folder; review absolute destination and custom tool paths after moving it.
+- Each file has a matching `.sha256` checksum. These preview packages are unsigned. The app and installer do not bypass Windows execution policy.
+
+Tools download through Settings on first use; they are not bundled. The Windows executable uses the static C runtime. Cross-platform source and packaging definitions are included, but Linux/macOS runtime verification is separate from this Windows preview.
 
 ## Core release
 
@@ -24,6 +36,8 @@ The interface combines YouTube-style media previews with Apple-inspired glass pa
 A resolution cap never falls back above the selected height. Explicit containers filter compatible streams; they do not silently transcode video. Unavailable combinations fail with a log. Original audio preserves a supported source audio codec, extracting it from a combined source if necessary. Conversion bitrate does not increase source quality.
 
 Partial downloads live under `.rusty-dlp-parts/<job-id>` in the selected destination, so different jobs do not share partial files. Quality variants that share output names are serialized; an already-existing final output is preserved and reported as skipped when its target can be predicted. Use a different filename template or folder to keep multiple variants of the same video.
+
+Destination folders also contain `.rusty-dlp-output-locks` so installed and portable copies coordinate writes to the same filename. The OS releases ownership when a process exits; remaining lock files do not indicate an active download.
 
 To use exact formats, inspect one individual video. Select compatible video and audio stream IDs as needed. For playlists, each item resolves its own formats from the quality policy. Video titles, durations, sizes, audio languages, and thumbnails depend on the source's metadata.
 
@@ -70,5 +84,16 @@ Before claiming any platform verified, run real dependency-install, single-video
 ## Distribution
 
 Portable archives contain the app and documentation; managed tools download on demand. macOS artifacts contain a `.app` bundle. Release signing/notarization and app self-updates are outside this version. Unsigned apps or downloaded tools may be blocked by OS execution policy; use a trusted locally built/signed artifact or supply already installed tools. The app does not bypass OS execution policy.
+
+Windows release preparation (PowerShell, with Inno Setup 6 installed):
+
+```powershell
+$env:CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_RUSTFLAGS = '-C target-feature=+crt-static'
+cargo build --locked --release --bin rusty-dlp --target x86_64-pc-windows-msvc
+python tools/package.py --target x86_64-pc-windows-msvc --platform windows-x86_64
+python tools/build_installer.py
+```
+
+The packaging commands refuse to replace existing output folders or installer files. Preserve or move previous outputs before preparing a replacement. Logo exports are checked in; maintainers can regenerate them with Pillow using `python tools/generate_icons.py`.
 
 See [THIRD_PARTY.md](THIRD_PARTY.md) for dependency sources and [PROJECT_BRIEF.md](PROJECT_BRIEF.md) for the broader product direction.

@@ -36,7 +36,8 @@ def main():
         resources.mkdir()
         binary = macos / "rusty-dlp"
         shutil.copy2(executable, binary)
-        plist = {"CFBundleName": "rusty_dlp", "CFBundleDisplayName": "rusty_dlp", "CFBundleExecutable": "rusty-dlp", "CFBundleIdentifier": "dev.rustydlp.desktop", "CFBundleVersion": version, "CFBundleShortVersionString": version, "CFBundlePackageType": "APPL", "NSHighResolutionCapable": True}
+        shutil.copy2(root / "assets" / "branding" / "icon.icns", resources / "icon.icns")
+        plist = {"CFBundleName": "rusty_dlp", "CFBundleDisplayName": "rusty_dlp", "CFBundleExecutable": "rusty-dlp", "CFBundleIdentifier": "dev.rustydlp.desktop", "CFBundleVersion": version, "CFBundleShortVersionString": version, "CFBundlePackageType": "APPL", "CFBundleIconFile": "icon.icns", "NSHighResolutionCapable": True}
         (contents / "Info.plist").write_bytes(plistlib.dumps(plist))
     else:
         binary = stage / executable.name
@@ -45,6 +46,9 @@ def main():
     for document in ["README.md", "THIRD_PARTY.md", "LICENSE"]:
         shutil.copy2(root / document, stage / document)
     shutil.copy2(root / "assets" / "dependencies.json", stage / "dependencies.json")
+    shutil.copytree(root / "assets" / "branding", stage / "branding")
+    if windows:
+        (stage / "portable.flag").write_text("Store settings, queue and managed tools in ./data\n")
     if args.platform.startswith("linux"):
         archive = destination / (name + ".tar.gz")
         def permissions(info):
@@ -54,7 +58,7 @@ def main():
         with tarfile.open(archive, "w:gz") as output:
             output.add(stage, arcname=name, filter=permissions)
     else:
-        archive = destination / (name + ".zip")
+        archive = destination / (name + ("-portable.zip" if windows else ".zip"))
         with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as output:
             for path in sorted(stage.rglob("*")):
                 if path.is_file():
