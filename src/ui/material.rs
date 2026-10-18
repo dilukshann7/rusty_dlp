@@ -94,7 +94,9 @@ pub fn glass(theme: &Theme, solid: bool) -> container::Style {
         text_color: Some(theme.palette().text),
         background: Some(background),
         border: Border {
-            color: if is_dark {
+            color: if solid {
+                line(theme)
+            } else if is_dark {
                 alpha(Color::WHITE, 0.16)
             } else {
                 alpha(Color::WHITE, 0.96)
