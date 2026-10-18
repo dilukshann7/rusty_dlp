@@ -33,15 +33,16 @@ const QUALITIES: &[Quality] = &[
 ];
 
 fn button<'a>(content: impl Into<Element<'a, Message>>) -> widget::Button<'a, Message> {
-    widget::button(content)
-        .padding([11, 16])
-        .height(44)
+    widget::button(container(content).center_y(Fill))
+        .padding([0, 16])
+        .height(material::CONTROL_HEIGHT)
         .style(material::primary_button)
 }
 fn text_input<'a>(placeholder: &str, value: &str) -> widget::TextInput<'a, Message> {
     widget::text_input(placeholder, value)
-        .padding([13, 14])
+        .padding([12, 12])
         .size(14)
+        .line_height(material::CONTROL_LINE_HEIGHT)
         .style(material::input)
 }
 fn pick_list<'a, T, L, V>(
@@ -55,15 +56,17 @@ where
     V: Borrow<T> + 'a,
 {
     widget::pick_list(options, selected, on_select)
-        .padding([13, 14])
+        .padding([12, 12])
         .text_size(14)
+        .text_line_height(material::CONTROL_LINE_HEIGHT)
         .style(material::select)
+        .menu_style(material::select_menu)
 }
 fn checkbox<'a>(checked: bool) -> widget::Checkbox<'a, Message> {
     widget::checkbox(checked)
         .size(20)
         .text_size(14)
-        .spacing(10)
+        .spacing(12)
         .style(material::check)
 }
 fn progress_bar<'a>(range: std::ops::RangeInclusive<f32>, value: f32) -> widget::ProgressBar<'a> {
@@ -83,7 +86,7 @@ fn muted<'a>(value: impl widget::text::IntoFragment<'a>) -> widget::Text<'a> {
 fn panel<'a>(app: &App, content: impl Into<Element<'a, Message>>) -> Element<'a, Message> {
     let solid = app.state.settings.reduce_transparency;
     container(content)
-        .padding(20)
+        .padding(24)
         .width(Fill)
         .style(move |theme| material::glass(theme, solid))
         .into()
@@ -93,7 +96,7 @@ fn field<'a>(
     control: impl Into<Element<'a, Message>>,
 ) -> Element<'a, Message> {
     column![muted(label), control.into()]
-        .spacing(7)
+        .spacing(8)
         .width(Fill)
         .into()
 }
@@ -128,7 +131,7 @@ pub fn view(app: &App) -> Element<'_, Message> {
             material::brand(),
             text("rusty_dlp").size(20).font(material::STRONG)
         ]
-        .spacing(10)
+        .spacing(12)
         .align_y(Alignment::Center),
         space().height(20),
         muted("Library"),
@@ -168,7 +171,7 @@ pub fn view(app: &App) -> Element<'_, Message> {
         sidebar = sidebar.push(
             button(label_row)
                 .width(Fill)
-                .padding([11, 12])
+                .padding([0, 12])
                 .style(move |theme, status| material::navigation(theme, status, selected))
                 .on_press(Message::Navigate(screen)),
         );
@@ -240,12 +243,12 @@ pub fn view(app: &App) -> Element<'_, Message> {
         .spacing(12)
         .align_y(Alignment::Center),
     )
-    .padding([16, 20])
+    .padding([16, 24])
     .width(Fill)
     .style(move |theme| material::glass(theme, solid));
     let mut content = column![
         header,
-        scrollable(container(page).width(Fill).padding([4, 3]))
+        scrollable(container(page).width(Fill))
             .style(material::scroll)
             .height(Fill),
     ]
@@ -277,14 +280,14 @@ pub fn view(app: &App) -> Element<'_, Message> {
     }
     let chrome = row![
         container(sidebar)
-            .padding(18)
+            .padding(16)
             .width(204)
             .height(Fill)
             .style(move |theme| material::sidebar(theme, solid)),
         content,
     ]
-    .spacing(18)
-    .padding(16)
+    .spacing(24)
+    .padding(24)
     .height(Fill)
     .width(Fill);
     if solid {
@@ -306,19 +309,28 @@ fn new_download(app: &App) -> Element<'_, Message> {
         && app.installing.is_none()
         && app.inspecting.is_none()
         && app.dependencies.ready();
-    let mut scope_controls = row![].spacing(8);
+    let mut scope_controls = row![].spacing(4);
     for &scope in InspectScope::ALL {
         let selected = app.scope == scope;
         scope_controls = scope_controls.push(
-            button(text(scope.to_string()).size(13).font(material::MEDIUM))
-                .style(move |theme, status| {
-                    if selected {
-                        material::primary_button(theme, status)
-                    } else {
-                        material::secondary_button(theme, status)
-                    }
-                })
-                .on_press(Message::Scope(scope)),
+            button(
+                text(scope.to_string())
+                    .size(13)
+                    .font(material::MEDIUM)
+                    .width(Fill)
+                    .align_x(Alignment::Center),
+            )
+            .width(Fill)
+            .height(36)
+            .padding([0, 12])
+            .style(move |theme, status| {
+                if selected {
+                    material::primary_button(theme, status)
+                } else {
+                    material::quiet_button(theme, status)
+                }
+            })
+            .on_press(Message::Scope(scope)),
         );
     }
     let mut top = column![
@@ -348,7 +360,10 @@ fn new_download(app: &App) -> Element<'_, Message> {
             .height(112)
             .style(material::editor),
         row![
-            scope_controls,
+            container(scope_controls)
+                .padding(4)
+                .width(320)
+                .style(material::segmented),
             space().width(Fill),
             button(if app.inspecting.is_some() {
                 "Inspecting…"
@@ -357,7 +372,7 @@ fn new_download(app: &App) -> Element<'_, Message> {
             })
             .on_press_maybe(inspect_enabled.then_some(Message::Inspect)),
         ]
-        .spacing(8)
+        .spacing(16)
         .align_y(Alignment::Center),
     ]
     .spacing(16);
@@ -373,7 +388,7 @@ fn new_download(app: &App) -> Element<'_, Message> {
             .align_y(Alignment::Center),
         );
     }
-    let mut page = column![panel(app, top)].spacing(18);
+    let mut page = column![panel(app, top)].spacing(24);
     for (index, preview) in app.previews.iter().enumerate() {
         page = page.push(preview_card(app, index, preview));
     }
@@ -406,7 +421,7 @@ fn download_action_bar(app: &App) -> Element<'_, Message> {
             .spacing(3),
             space().width(Fill),
             button("Add selected to queue")
-                .padding([12, 20])
+                .padding([0, 20])
                 .on_press_maybe(
                     (selected > 0 && !app.storage_blocked && !app.storage_failed)
                         .then_some(Message::Enqueue)
@@ -496,7 +511,7 @@ fn preview_card<'a>(app: &'a App, index: usize, preview: &'a MediaPreview) -> El
         .spacing(16)
         .align_y(Alignment::Center)
     ]
-    .spacing(14);
+    .spacing(16);
     if preview.is_playlist {
         body = body.push(
             row![
@@ -540,7 +555,7 @@ fn preview_card<'a>(app: &'a App, index: usize, preview: &'a MediaPreview) -> El
                 .spacing(4)
                 .width(Fill)
             ]
-            .spacing(10)
+            .spacing(12)
             .align_y(Alignment::Center);
             if let Some(url) = entry_url {
                 entry_row = entry_row.push(
@@ -587,13 +602,13 @@ fn options(app: &App) -> Element<'_, Message> {
                 .width(Fill)
             ),
         ]
-        .spacing(14),
+        .spacing(16),
     ]
-    .spacing(14);
+    .spacing(16);
     if app.options.mode == MediaMode::AudioOnly {
         body = body.push(row![field("Audio format", pick_list(AudioFormat::ALL, Some(app.options.audio_format), Message::AudioFormat).width(Fill)),
             field("Bitrate (kbps)", pick_list([64, 96, 128, 160, 192, 256, 320], Some(app.options.audio_bitrate), Message::Bitrate).width(Fill)),
-        ].spacing(14)).push(muted("Original preserves the source stream. MP3 and M4A use FFmpeg when conversion is needed; bitrate does not improve source quality."));
+        ].spacing(16)).push(muted("Original preserves the source stream. MP3 and M4A use FFmpeg when conversion is needed; bitrate does not improve source quality."));
     } else {
         body = body.push(field("Video container", pick_list(Container::ALL, Some(app.options.container), Message::Container).width(Fill)))
             .push(muted("An explicit container filters compatible streams and remuxes without video transcoding. Quality limits never fall back above your cap."));
@@ -718,7 +733,7 @@ fn queue(app: &App, history: bool) -> Element<'_, Message> {
         .iter()
         .filter(|j| j.state.terminal() == history)
         .collect::<Vec<_>>();
-    let mut page = column![].spacing(14);
+    let mut page = column![].spacing(16);
     if history {
         page = page.push(
             row![
@@ -793,7 +808,7 @@ fn job_card<'a>(app: &'a App, job: &'a DownloadJob) -> Element<'a, Message> {
             job.options.destination.display()
         )),
     ]
-    .spacing(10);
+    .spacing(12);
     if job.state.active() {
         if let Some(percent) = job.progress.percent() {
             body = body
@@ -914,7 +929,7 @@ fn settings(app: &App) -> Element<'_, Message> {
                     .width(Fill)
                 ),
             ]
-            .spacing(14),
+            .spacing(16),
             checkbox(app.state.settings.reduce_transparency)
                 .label("Reduce transparency")
                 .on_toggle(Message::ReduceTransparency),
@@ -941,9 +956,9 @@ fn settings(app: &App) -> Element<'_, Message> {
             .align_y(Alignment::Center),
             muted("Save other default download options from the New download screen."),
         ]
-        .spacing(14)
+        .spacing(16)
     )]
-    .spacing(18);
+    .spacing(24);
     page = page.push(row![column![text("Download tools").size(20).font(material::STRONG), muted("Detected locally or installed into your user data folder. No administrator access needed.")].spacing(5).width(Fill),
         button(if app.discovering { "Checking…" } else { "Check tools" }).style(material::secondary_button).on_press_maybe((!app.tools_busy()).then_some(Message::Discover))].spacing(12).align_y(Alignment::Center));
     for &kind in ToolKind::ALL {
@@ -1007,7 +1022,7 @@ fn settings(app: &App) -> Element<'_, Message> {
                 button("Install approved version")
                     .on_press_maybe(idle.then_some(Message::Install(kind, false)))
             ]
-            .spacing(10);
+            .spacing(12);
             if status.is_some_and(|s| s.source.starts_with("Managed")) {
                 actions = actions.push(
                     button(if kind == ToolKind::Ffmpeg && cfg!(target_os = "macos") {
