@@ -18,7 +18,7 @@ fn main() -> iced::Result {
         }
     };
     iced::application(move || App::new(root.clone()), App::update, ui::view)
-        .title("Rusty DLP")
+        .title("rusty_dlp")
         .theme(App::theme)
         .subscription(App::subscription)
         .window(iced::window::Settings {
@@ -33,7 +33,7 @@ fn main() -> iced::Result {
 
 fn startup_error(message: &str) {
     rfd::MessageDialog::new()
-        .set_title("Rusty DLP")
+        .set_title("rusty_dlp")
         .set_description(message)
         .set_level(rfd::MessageLevel::Error)
         .show();

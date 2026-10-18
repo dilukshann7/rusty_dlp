@@ -203,7 +203,7 @@ impl App {
             ThemeChoice::Light => Theme::Light,
             ThemeChoice::System if self.system_light => Theme::Light,
             _ => Theme::custom(
-                "Rusty DLP",
+                "rusty_dlp",
                 iced::theme::Palette {
                     background: iced::Color::from_rgb8(18, 21, 27),
                     text: iced::Color::from_rgb8(230, 235, 243),

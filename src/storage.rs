@@ -35,7 +35,7 @@ impl InstanceLock {
             .open(root.join("instance.lock"))?;
         fs2::FileExt::try_lock_exclusive(&file).map_err(|_| {
             StorageError(
-                "Rusty DLP is already running, or the state folder cannot be locked.".into(),
+                "rusty_dlp is already running, or the state folder cannot be locked.".into(),
             )
         })?;
         Ok(Self { _file: file })

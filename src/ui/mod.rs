@@ -74,7 +74,7 @@ pub fn view(app: &App) -> Element<'_, Message> {
         .filter(|j| j.state == JobState::Queued)
         .count();
     let mut sidebar = column![
-        text("RUSTY / DLP").size(23),
+        text("rusty_dlp").size(23),
         muted("Your media. Your queue."),
         space().height(24),
     ]
@@ -101,7 +101,7 @@ pub fn view(app: &App) -> Element<'_, Message> {
     sidebar = sidebar
         .push(space().height(Fill))
         .push(muted(format!("{active} active · {queued} queued")))
-        .push(muted("Rusty DLP 0.1.0"));
+        .push(muted("rusty_dlp 0.1.0"));
     let title = match app.screen {
         Screen::NewDownload => "New download",
         Screen::Queue => "Download queue",

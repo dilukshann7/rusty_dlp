@@ -29,14 +29,14 @@ def main():
     stage = destination / name
     stage.mkdir(exist_ok=False)
     if args.platform.startswith("macos"):
-        contents = stage / "Rusty DLP.app" / "Contents"
+        contents = stage / "rusty_dlp.app" / "Contents"
         macos = contents / "MacOS"
         resources = contents / "Resources"
         macos.mkdir(parents=True)
         resources.mkdir()
         binary = macos / "rusty-dlp"
         shutil.copy2(executable, binary)
-        plist = {"CFBundleName": "Rusty DLP", "CFBundleDisplayName": "Rusty DLP", "CFBundleExecutable": "rusty-dlp", "CFBundleIdentifier": "dev.rustydlp.desktop", "CFBundleVersion": version, "CFBundleShortVersionString": version, "CFBundlePackageType": "APPL", "NSHighResolutionCapable": True}
+        plist = {"CFBundleName": "rusty_dlp", "CFBundleDisplayName": "rusty_dlp", "CFBundleExecutable": "rusty-dlp", "CFBundleIdentifier": "dev.rustydlp.desktop", "CFBundleVersion": version, "CFBundleShortVersionString": version, "CFBundlePackageType": "APPL", "NSHighResolutionCapable": True}
         (contents / "Info.plist").write_bytes(plistlib.dumps(plist))
     else:
         binary = stage / executable.name

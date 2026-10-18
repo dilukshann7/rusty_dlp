@@ -1,4 +1,4 @@
-# Rusty DLP
+# rusty_dlp
 
 A native Rust + iced desktop front end for yt-dlp. Inspect media, select playlist entries and quality, and manage a persistent download queue.
 
