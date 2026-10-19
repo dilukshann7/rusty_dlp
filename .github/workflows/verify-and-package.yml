@@ -68,8 +68,12 @@ jobs:
         if: (github.event_name == 'push' || inputs.package) && runner.os == 'Windows'
         shell: pwsh
         run: |
-          $output = & target/x86_64-pc-windows-msvc/release/rusty-dlp.exe --version
-          if ($LASTEXITCODE -ne 0 -or $output -ne 'rusty_dlp 1.0.0') { throw "Unexpected version output: $output" }
+          $binary = Join-Path $env:GITHUB_WORKSPACE 'target\x86_64-pc-windows-msvc\release\rusty-dlp.exe'
+          $stdoutPath = Join-Path $env:RUNNER_TEMP 'rusty-dlp-version.txt'
+          $stderrPath = Join-Path $env:RUNNER_TEMP 'rusty-dlp-version-error.txt'
+          $process = Start-Process -FilePath $binary -ArgumentList '--version' -Wait -PassThru -NoNewWindow -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath
+          $output = (Get-Content -LiteralPath $stdoutPath -Raw).Trim()
+          if ($process.ExitCode -ne 0 -or $output -ne 'rusty_dlp 1.0.0') { throw "Unexpected version output: $output" }
       - name: Package unsigned artifact
         if: github.event_name == 'push' || inputs.package
         run: python tools/package.py --target ${{ matrix.target }} --platform ${{ matrix.platform }}
