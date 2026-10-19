@@ -15,6 +15,9 @@ class PackageTests(unittest.TestCase):
     def fixture(self, root, target, platform):
         for name in ["Cargo.toml", "README.md", "THIRD_PARTY.md", "LICENSE"]:
             (root / name).write_bytes((ROOT / name).read_bytes())
+        (root / "docs").mkdir()
+        for name in ["USER_GUIDE.md", "DEVELOPMENT.md"]:
+            (root / "docs" / name).write_bytes((ROOT / "docs" / name).read_bytes())
         (root / "assets").mkdir()
         (root / "assets" / "dependencies.json").write_bytes((ROOT / "assets" / "dependencies.json").read_bytes())
         import shutil
@@ -53,6 +56,8 @@ class PackageTests(unittest.TestCase):
                         self.assertTrue(binary.mode & 0o111)
                 self.assertTrue(any(name.endswith("/README.md") for name in names))
                 self.assertTrue(any(name.endswith("/THIRD_PARTY.md") for name in names))
+                self.assertTrue(any(name.endswith("/docs/USER_GUIDE.md") for name in names))
+                self.assertTrue(any(name.endswith("/docs/DEVELOPMENT.md") for name in names))
                 self.assertTrue(any(name.endswith("/branding/logo.svg") for name in names))
                 if platform.startswith("windows"):
                     self.assertTrue(archive.name.endswith("-portable.zip"))
@@ -90,12 +95,19 @@ class PackageTests(unittest.TestCase):
             root = pathlib.Path(folder)
             self.fixture(root, "x86_64-pc-windows-msvc", "windows-x86_64")
             (root / "dist").mkdir()
-            output = root / "dist/rusty_dlp-0.1.0-windows-x64-setup.exe"
+            output = root / "dist/rusty_dlp-1.0.0-windows-x64-setup.exe"
             output.write_bytes(b"preserve this installer")
             result = subprocess.run([sys.executable, str(ROOT / "tools/build_installer.py"), "--root", folder, "--compiler", sys.executable], capture_output=True, text=True)
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("Installer already exists", result.stderr)
             self.assertEqual(output.read_bytes(), b"preserve this installer")
+
+    def test_windows_installer_includes_user_and_development_guides(self):
+        installer = (ROOT / "installer" / "windows.iss").read_text()
+        for guide in ["USER_GUIDE.md", "DEVELOPMENT.md"]:
+            with self.subTest(guide=guide):
+                self.assertIn(f"\\docs\\{guide}", installer)
+                self.assertIn(f"DestDir: \"{{app}}\\docs\"", installer)
 
 
 if __name__ == "__main__":

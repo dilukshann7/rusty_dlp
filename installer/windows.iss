@@ -1,5 +1,5 @@
 #ifndef AppVersion
-  #define AppVersion "0.1.0"
+  #define AppVersion "1.0.0"
 #endif
 #ifndef SourceRoot
   #define SourceRoot ".."
@@ -46,6 +46,8 @@ Source: "{#BinaryPath}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceRoot}\README.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceRoot}\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceRoot}\THIRD_PARTY.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SourceRoot}\docs\USER_GUIDE.md"; DestDir: "{app}\docs"; Flags: ignoreversion
+Source: "{#SourceRoot}\docs\DEVELOPMENT.md"; DestDir: "{app}\docs"; Flags: ignoreversion
 Source: "{#SourceRoot}\assets\dependencies.json"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceRoot}\assets\branding\*"; DestDir: "{app}\branding"; Flags: ignoreversion
 

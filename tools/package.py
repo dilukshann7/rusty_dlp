@@ -45,6 +45,10 @@ def main():
     binary.chmod(binary.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
     for document in ["README.md", "THIRD_PARTY.md", "LICENSE"]:
         shutil.copy2(root / document, stage / document)
+    docs = stage / "docs"
+    docs.mkdir()
+    for document in ["USER_GUIDE.md", "DEVELOPMENT.md"]:
+        shutil.copy2(root / "docs" / document, docs / document)
     shutil.copy2(root / "assets" / "dependencies.json", stage / "dependencies.json")
     shutil.copytree(root / "assets" / "branding", stage / "branding")
     if windows:

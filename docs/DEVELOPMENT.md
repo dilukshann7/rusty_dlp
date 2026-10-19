@@ -29,6 +29,8 @@ Brand assets are checked in. Regenerate them with Pillow using `python tools/gen
 
 ## Other platforms
 
-The [manual workflow](../.github/workflows/verify-and-package.yml) contains Linux development packages and verification/packaging definitions for Windows x64, Linux x64, Intel macOS, and Apple Silicon macOS. Linux desktop use requires a display environment and native file-dialog portal. The workflow runs only through `workflow_dispatch`; enabling packaging creates unsigned archives without publishing a release.
+The [release workflow](../.github/workflows/verify-and-package.yml) verifies and packages Windows x64, Linux x64, Intel macOS, and Apple silicon macOS. Pushing the `v1.0.0` tag runs the four-target matrix and publishes the stable GitHub release only when every target passes. The workflow validates artifact names and SHA-256 sidecars before publication. A manual `workflow_dispatch` run can also create unsigned packages without publishing a release.
+
+Linux desktop use requires a display environment and native file-dialog portal. CI builds and tests Linux and macOS packages, but runtime behavior on those platforms is not verified by the Windows end-to-end test.
 
 See [verification status](IMPLEMENTATION_STATUS.md) for checks completed and remaining platform smoke tests. Real dependency-install, download, conversion, cancellation/resume, and restart checks must run on each platform before that platform is called verified.

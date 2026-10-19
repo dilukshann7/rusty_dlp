@@ -3,15 +3,16 @@
   <h1>rusty_dlp</h1>
   <p>A compact desktop app for downloading videos, playlists, and audio.</p>
   <p>
-    <a href="https://github.com/dilukshann7/rusty_dlp/releases/download/v0.1.0/rusty_dlp-0.1.0-windows-x64-setup.exe"><strong>Windows installer</strong></a>
-    &nbsp;·&nbsp;
-    <a href="https://github.com/dilukshann7/rusty_dlp/releases/download/v0.1.0/rusty-dlp-0.1.0-windows-x86_64-portable.zip"><strong>Portable ZIP</strong></a>
-    &nbsp;·&nbsp;
-    <a href="https://github.com/dilukshann7/rusty_dlp/releases">Releases</a>
+    Windows: <a href="https://github.com/dilukshann7/rusty_dlp/releases/download/v1.0.0/rusty_dlp-1.0.0-windows-x64-setup.exe"><strong>installer</strong></a>
+    · <a href="https://github.com/dilukshann7/rusty_dlp/releases/download/v1.0.0/rusty-dlp-1.0.0-windows-x86_64-portable.zip"><strong>portable ZIP</strong></a><br>
+    Linux x64: <a href="https://github.com/dilukshann7/rusty_dlp/releases/download/v1.0.0/rusty-dlp-1.0.0-linux-x86_64.tar.gz"><strong>tar.gz</strong></a>
+    · macOS Intel: <a href="https://github.com/dilukshann7/rusty_dlp/releases/download/v1.0.0/rusty-dlp-1.0.0-macos-x86_64.zip"><strong>ZIP</strong></a>
+    · Apple silicon: <a href="https://github.com/dilukshann7/rusty_dlp/releases/download/v1.0.0/rusty-dlp-1.0.0-macos-aarch64.zip"><strong>ZIP</strong></a><br>
+    <a href="docs/RELEASE_NOTES_1.0.0.md">Release notes</a> · <a href="https://github.com/dilukshann7/rusty_dlp/releases">All releases</a>
   </p>
 </div>
 
-Windows x64 · v0.1.0 preview · Unsigned packages. Checksums are included with each release.
+v1.0.0 stable · Unsigned packages with SHA-256 checksums. Windows end-to-end testing is verified; Linux and macOS are CI-built and tested, with runtime testing not verified.
 
 ## Features
 
