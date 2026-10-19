@@ -78,7 +78,8 @@ class PackageTests(unittest.TestCase):
             root = pathlib.Path(folder)
             self.fixture(root, "x86_64-pc-windows-msvc", "windows-x86_64")
             self.assertEqual(self.package(root, "x86_64-pc-windows-msvc", "windows-x86_64").returncode, 0)
-            sentinel = next((root / "dist").glob("rusty-dlp-*")) / "keep.txt"
+            package_dir = root / "dist" / "rusty-dlp-1.0.0-windows-x86_64"
+            sentinel = package_dir / "keep.txt"
             sentinel.write_text("keep")
             self.assertNotEqual(self.package(root, "x86_64-pc-windows-msvc", "windows-x86_64").returncode, 0)
             self.assertEqual(sentinel.read_text(), "keep")
